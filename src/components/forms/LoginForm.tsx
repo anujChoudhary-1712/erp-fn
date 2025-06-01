@@ -12,7 +12,7 @@ interface Errors {
   [key: string]: string;
 }
 
-const LoginForm: React.FC = () => {
+const LoginForm = ({userType}:{userType:"internal" | "customers"}) => {
   const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
