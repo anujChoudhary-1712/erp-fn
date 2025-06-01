@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import React, { ChangeEvent, FormEvent, useState } from "react";
 import Button from "../ReusableComponents/Button";
