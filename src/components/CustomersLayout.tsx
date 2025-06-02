@@ -255,6 +255,7 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
           navigationItems={navigationItems}
           currentPath={currentPath}
           className="w-full"
+          userType="organization"
         />
       </div>
 

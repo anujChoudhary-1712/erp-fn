@@ -3,6 +3,10 @@
 import React, { ChangeEvent, FormEvent, useState } from "react";
 import Button from "../ReusableComponents/Button";
 import Input from "../ReusableComponents/InputField";
+import AuthApis from "@/actions/Apis/AuthApis";
+import { useRouter } from "next/navigation";
+import { setCookie } from "@/actions/CookieUtils";
+import { useUser } from "@/context/UserContext";
 
 interface FormData {
   email: string;
@@ -13,7 +17,7 @@ interface Errors {
   [key: string]: string;
 }
 
-const LoginForm = ({userType}:{userType:"internal" | "customers"}) => {
+const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
   const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
@@ -21,6 +25,9 @@ const LoginForm = ({userType}:{userType:"internal" | "customers"}) => {
 
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
+  const {decodeAndSetUser} = useUser()
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -38,15 +45,35 @@ const LoginForm = ({userType}:{userType:"internal" | "customers"}) => {
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const res = await AuthApis.loginUser({
+        email: formData.email,
+        password: formData.password,
+        userType,
+      });
+      if (res.status === 200) {
+        console.log("Login successful:", res.data);
+        setCookie("token", res.data.token, {
+          expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          sameSite: "strict",
+          secure: true,
+        });
+        decodeAndSetUser(res.data.token);
+        if (userType === "organization") {
+          router.push("/dashboard");
+        } else {
+          router.push("/internal/organizations");
+        }
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+    } finally{
       setLoading(false);
-      alert("Form submitted successfully!");
-    }, 2000);
+    }
   };
 
   return (

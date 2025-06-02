@@ -5,6 +5,7 @@ import MobileNavigation from './ReusableComponents/MobileNavigation';
 import { 
   Building2,
 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 // Define navigation items for organizations
 const navigationItems = [
@@ -36,16 +37,18 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
   children, 
   currentPath = '/internal' 
 }) => {
+  const pathname = usePathname()
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col">
+      {pathname !== "/internal/login" && <div className="hidden lg:flex lg:w-64 lg:flex-col">
         <Sidebar 
           navigationItems={navigationItems}
           currentPath={currentPath}
           className="w-full"
+          userType='internal'
         />
-      </div>
+      </div>}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
