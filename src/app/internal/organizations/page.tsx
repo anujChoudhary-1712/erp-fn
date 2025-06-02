@@ -15,9 +15,9 @@ import {
   Shield,
   Users,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import EditOrgModal from "@/components/modal/EditOrgModal";
 import AddOrgModal from "@/components/modal/AddOrgModal";
+import { formatDate } from "@/utils/date";
 
 // Define the Organization interface based on the API response
 interface Owner {
@@ -201,17 +201,6 @@ const OrgPage = () => {
     }
   };
 
-  // Helper function to format dates
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return `${date.toLocaleDateString()} (${formatDistanceToNow(date, {
-        addSuffix: true,
-      })})`;
-    } catch (e) {
-      return dateString;
-    }
-  };
 
   if (loading) {
     return (

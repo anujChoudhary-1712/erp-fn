@@ -48,7 +48,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleLogout = () => {
     logout(userType);
-    router.push("/login");
   };
 
   const isActive = (href: string) => currentPath === href;

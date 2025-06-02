@@ -16,6 +16,7 @@ import {
   Home,
   Settings,
   MoreHorizontal,
+  User,
 } from "lucide-react";
 import MobileHeader from "./ReusableComponents/MobileHeader";
 
@@ -115,11 +116,17 @@ const navigationItems = [
   //       { id: 'doc-review', label: 'Document Review', icon: <CheckCircle size={16} />, href: '/dashboard/documents/review' }
   //     ]
   //   },
+  // {
+  //   id: "settings",
+  //   label: "Settings",
+  //   icon: <Settings size={20} />,
+  //   href: "/dashboard/settings",
+  // },
   {
-    id: "settings",
-    label: "Settings",
-    icon: <Settings size={20} />,
-    href: "/dashboard/settings",
+    id: "team",
+    label: "Team",
+    icon: <User size={20} />,
+    href: "/dashboard/team",
   },
 ];
 
@@ -158,11 +165,17 @@ const mainTabItems = [
   //     icon: <MoreHorizontal size={20} />,
   //     href: '/dashboard/more'
   //   }
+  // {
+  //   id: "settings",
+  //   label: "Settings",
+  //   icon: <Settings size={20} />,
+  //   href: "/dashboard/settings",
+  // },
   {
-    id: "settings",
-    label: "Settings",
-    icon: <Settings size={20} />,
-    href: "/dashboard/settings",
+    id: "team",
+    label: "Team",
+    icon: <User size={20} />,
+    href: "/dashboard/team",
   },
 ];
 
@@ -222,20 +235,20 @@ const moreMenuItems = [
   //       { id: 'packing', label: 'Packing Stage', icon: <Package size={16} />, href: '/dashboard/production-stage/packing' }
   //     ]
   //   },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: <Settings size={20} />,
-    href: "/dashboard/settings",
-    children: [
-      {
-        id: "profile",
-        label: "Manage your profile and preferences",
-        icon: <Settings size={16} />,
-        href: "/dashboard/settings/profile",
-      },
-    ],
-  },
+  // {
+  //   id: "settings",
+  //   label: "Settings",
+  //   icon: <Settings size={20} />,
+  //   href: "/dashboard/settings",
+  //   children: [
+  //     {
+  //       id: "profile",
+  //       label: "Manage your profile and preferences",
+  //       icon: <Settings size={16} />,
+  //       href: "/dashboard/settings/profile",
+  //     },
+  //   ],
+  // },
 ];
 
 interface CustomersLayoutProps {
@@ -262,10 +275,7 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Main Content Header */}
-        <MobileHeader
-          companyName="Company Name"
-          userName="John Smith"
-        />
+        <MobileHeader companyName="Company Name" userName="John Smith" />
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
           <div className="h-full">
