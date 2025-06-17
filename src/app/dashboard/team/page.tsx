@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/utils/date";
 import AddTeamMemberModal from "@/components/modal/AddTeamMemberModal";
+import Button from "@/components/ReusableComponents/Button";
 
 interface UserData {
   _id: string;
@@ -41,7 +42,9 @@ const TeamPage = () => {
     type: "success" | "error";
     message: string;
   } | null>(null);
-  const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
+  const [processingUsers, setProcessingUsers] = useState<Set<string>>(
+    new Set()
+  );
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -79,32 +82,42 @@ const TeamPage = () => {
 
   const handleToggleStatus = async (userId: string, currentStatus: string) => {
     try {
-      setProcessingUsers(prev => new Set(prev).add(userId));
+      setProcessingUsers((prev) => new Set(prev).add(userId));
       setStatusMessage(null);
-      
+
       const newStatus = currentStatus === "active" ? "inactive" : "active";
-      const res = await OrgUserApis.deactivateUser(userId);
-      
+      let res;
+      if (currentStatus === "active") {
+        res = await OrgUserApis.deactivateUser(userId);
+      } else {
+        res = await OrgUserApis.activateUser(userId);
+      }
+
       if (res.status === 200) {
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user._id === userId ? { ...user, status: newStatus as "active" | "inactive" } : user
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user._id === userId
+              ? { ...user, status: newStatus as "active" | "inactive" }
+              : user
           )
         );
-        
+
         setStatusMessage({
           type: "success",
-          message: `User ${newStatus === "active" ? "activated" : "deactivated"} successfully`,
+          message: `User ${
+            newStatus === "active" ? "activated" : "deactivated"
+          } successfully`,
         });
       }
     } catch (error: any) {
       console.error("Error updating user status:", error);
       setStatusMessage({
         type: "error",
-        message: error.response?.data?.message || "Failed to update user status",
+        message:
+          error.response?.data?.message || "Failed to update user status",
       });
     } finally {
-      setProcessingUsers(prev => {
+      setProcessingUsers((prev) => {
         const newSet = new Set(prev);
         newSet.delete(userId);
         return newSet;
@@ -116,9 +129,9 @@ const TeamPage = () => {
     try {
       setIsSubmitting(true);
       setStatusMessage(null);
-      
+
       const res = await OrgUserApis.addUser(userData);
-      
+
       if (res.status === 200 || res.status === 201) {
         setIsAddModalOpen(false);
         setStatusMessage({
@@ -165,7 +178,7 @@ const TeamPage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto p-4">
       {/* Status Message */}
       {statusMessage && (
         <div
@@ -187,15 +200,12 @@ const TeamPage = () => {
       )}
 
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-0">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-0">
           Team Members
         </h1>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors"
-        >
+        <Button variant="primary" onClick={() => setIsAddModalOpen(true)}>
           + Add New Member
-        </button>
+        </Button>
       </div>
 
       {users.length === 0 ? (
