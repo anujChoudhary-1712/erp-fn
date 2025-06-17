@@ -28,17 +28,17 @@ const navigationItems = [
     icon: <Home size={20} />,
     href: "/dashboard",
   },
-  //   {
-  //     id: 'purchase-orders',
-  //     label: 'Purchase Orders',
-  //     icon: <ShoppingCart size={20} />,
-  //     href: '/dashboard/purchase-orders',
-  //     children: [
-  //       { id: 'po-review', label: 'Order Review', icon: <CheckCircle size={16} />, href: '/dashboard/purchase-orders/review' },
-  //       { id: 'po-checklist', label: 'Order Checklist', icon: <FileText size={16} />, href: '/dashboard/purchase-orders/checklist' },
-  //       { id: 'finished-goods', label: 'Finished Goods Store', icon: <Package size={16} />, href: '/dashboard/purchase-orders/finished-goods' }
-  //     ]
-  //   },
+    {
+      id: 'purchase-orders',
+      label: 'Purchase Orders',
+      icon: <ShoppingCart size={20} />,
+      href: '/dashboard/orders',
+      // children: [
+      //   { id: 'po-review', label: 'Order Review', icon: <CheckCircle size={16} />, href: '/dashboard/purchase-orders/review' },
+      //   { id: 'po-checklist', label: 'Order Checklist', icon: <FileText size={16} />, href: '/dashboard/purchase-orders/checklist' },
+      //   { id: 'finished-goods', label: 'Finished Goods Store', icon: <Package size={16} />, href: '/dashboard/purchase-orders/finished-goods' }
+      // ]
+    },
   //   {
   //     id: 'production',
   //     label: 'Production Planning',
@@ -138,13 +138,13 @@ const mainTabItems = [
     icon: <Home size={20} />,
     href: "/dashboard",
   },
-  //   {
-  //     id: 'orders',
-  //     label: 'Orders',
-  //     icon: <ShoppingCart size={20} />,
-  //     href: '/dashboard/purchase-orders',
-  //     badge: 5
-  //   },
+  {
+    id: "orders",
+    label: "Orders",
+    icon: <ShoppingCart size={20} />,
+    href: "/dashboard/orders",
+    badge: 5,
+  },
   //   {
   //     id: 'production',
   //     label: 'Production',
@@ -277,7 +277,7 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
         {/* Main Content Header */}
         <MobileHeader companyName="Company Name" userName="John Smith" />
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 md:overflow-auto pb-20 md:pb-0">
           <div className="h-full">
             {/* Add padding bottom on mobile to account for bottom navigation */}
             <div className="pb-20 lg:pb-0 h-full">{children}</div>
