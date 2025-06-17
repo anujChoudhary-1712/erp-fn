@@ -11,6 +11,8 @@ import {
   AlertCircle,
   ToggleLeft,
   ToggleRight,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { formatDate } from "@/utils/date";
 import AddTeamMemberModal from "@/components/modal/AddTeamMemberModal";
@@ -34,6 +36,62 @@ interface AddUserPayload {
   password: string;
 }
 
+interface ConfirmModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isLoading: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+}
+
+const ConfirmModal: React.FC<ConfirmModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  isLoading,
+  title,
+  message,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+        <p className="text-gray-600 mb-6">{message}</p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                Deleting...
+              </>
+            ) : (
+              confirmText
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TeamPage = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -47,6 +105,16 @@ const TeamPage = () => {
   );
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
+    isOpen: boolean;
+    user: UserData | null;
+    isLoading: boolean;
+  }>({
+    isOpen: false,
+    user: null,
+    isLoading: false,
+  });
 
   useEffect(() => {
     fetchTeamData();
@@ -125,6 +193,64 @@ const TeamPage = () => {
     }
   };
 
+  const handleDeleteClick = (user: UserData) => {
+    setDeleteConfirmModal({
+      isOpen: true,
+      user,
+      isLoading: false,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmModal.user) return;
+
+    try {
+      setDeleteConfirmModal(prev => ({
+        ...prev,
+        isLoading: true,
+      }));
+      setStatusMessage(null);
+
+      const res = await OrgUserApis.deleteUser(deleteConfirmModal.user._id);
+
+      if (res.status === 200) {
+        setUsers((prevUsers) =>
+          prevUsers.filter((user) => user._id !== deleteConfirmModal.user!._id)
+        );
+        
+        setStatusMessage({
+          type: "success",
+          message: "Team member deleted successfully",
+        });
+        
+        setDeleteConfirmModal({
+          isOpen: false,
+          user: null,
+          isLoading: false,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error deleting team member:", error);
+      setStatusMessage({
+        type: "error",
+        message: error.response?.data?.message || "Failed to delete team member",
+      });
+      
+      setDeleteConfirmModal(prev => ({
+        ...prev,
+        isLoading: false,
+      }));
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmModal({
+      isOpen: false,
+      user: null,
+      isLoading: false,
+    });
+  };
+
   const handleAddUser = async (userData: AddUserPayload) => {
     try {
       setIsSubmitting(true);
@@ -149,6 +275,61 @@ const TeamPage = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEditUser = async (userData: AddUserPayload) => {
+    if (!editingUser) return;
+    
+    try {
+      setIsSubmitting(true);
+      setStatusMessage(null);
+
+      // Prepare the update data - only include password if it's provided
+      const updateData: any = {
+        name: userData.name,
+        roles: userData.roles,
+      };
+
+      if (userData.password.trim()) {
+        updateData.password = userData.password;
+      }
+
+      const res = await OrgUserApis.editUser(editingUser._id, updateData);
+
+      if (res.status === 200) {
+        setEditingUser(null);
+        setStatusMessage({
+          type: "success",
+          message: "Team member updated successfully",
+        });
+        await fetchTeamData(); // Refresh the list
+      }
+    } catch (error: any) {
+      console.error("Error updating team member:", error);
+      setStatusMessage({
+        type: "error",
+        message: error.response?.data?.message || "Failed to update team member",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleModalSubmit = (userData: AddUserPayload) => {
+    if (editingUser) {
+      handleEditUser(userData);
+    } else {
+      handleAddUser(userData);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setEditingUser(null);
+  };
+
+  const handleEditClick = (user: UserData) => {
+    setEditingUser(user);
   };
 
   if (loading) {
@@ -241,7 +422,21 @@ const TeamPage = () => {
                       {user.name}
                     </h2>
                   </div>
-                  <div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleEditClick(user)}
+                      className="text-gray-500 hover:text-blue-500 transition-colors"
+                      aria-label="Edit user"
+                    >
+                      <Edit size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(user)}
+                      className="text-gray-500 hover:text-red-500 transition-colors"
+                      aria-label="Delete user"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                     <button
                       onClick={() => handleToggleStatus(user._id, user.status)}
                       disabled={processingUsers.has(user._id)}
@@ -286,7 +481,7 @@ const TeamPage = () => {
                       className="mr-2 flex-shrink-0 text-gray-400"
                     />
                     <span className="truncate capitalize">
-                      {user.roles.join(", ")}
+                      {user.roles.join(", ").replace(/_/g, " ")}
                     </span>
                   </div>
 
@@ -316,12 +511,30 @@ const TeamPage = () => {
         </div>
       )}
 
-      {/* Add Team Member Modal */}
+      {/* Add/Edit Team Member Modal */}
       <AddTeamMemberModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleAddUser}
+        isOpen={isAddModalOpen || editingUser !== null}
+        onClose={handleCloseModal}
+        onSubmit={handleModalSubmit}
         isLoading={isSubmitting}
+        editMode={editingUser !== null}
+        initialData={editingUser ? {
+          name: editingUser.name,
+          email: editingUser.email,
+          roles: editingUser.roles,
+        } : undefined}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirmModal.isOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteConfirmModal.isLoading}
+        title="Delete Team Member"
+        message={`Are you sure you want to delete ${deleteConfirmModal.user?.name || 'this team member'}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
       />
     </div>
   );

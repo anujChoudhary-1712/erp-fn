@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
 interface AddTeamMemberModalProps {
@@ -13,6 +13,12 @@ interface AddTeamMemberModalProps {
     password: string;
   }) => void;
   isLoading: boolean;
+  editMode?: boolean;
+  initialData?: {
+    name: string;
+    email: string;
+    roles: string[];
+  };
 }
 
 const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
@@ -20,13 +26,37 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
   onClose,
   onSubmit,
   isLoading,
+  editMode = false,
+  initialData,
 }) => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    roles: ["member"], // Default role
+    roles: ["purchase_order_member"], // Default role
     password: "",
   });
+
+  // Reset form when modal opens/closes or when switching between add/edit modes
+  useEffect(() => {
+    if (isOpen) {
+      if (editMode && initialData) {
+        setFormData({
+          name: initialData.name || "",
+          email: initialData.email || "",
+          roles: initialData.roles.length > 0 ? initialData.roles : ["purchase_order_member"],
+          password: "", // Always empty for edit mode
+        });
+      } else {
+        setFormData({
+          name: "",
+          email: "",
+          roles: ["purchase_order_member"],
+          password: "",
+        });
+      }
+      setErrors({});
+    }
+  }, [isOpen, editMode, initialData]);
 
   const [errors, setErrors] = useState<{
     name?: string;
@@ -86,10 +116,10 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
       isValid = false;
     }
 
-    if (!formData.password.trim()) {
+    if (!formData.password.trim() && !editMode) {
       newErrors.password = "Password is required";
       isValid = false;
-    } else if (formData.password.length < 6) {
+    } else if (formData.password.trim() && formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
       isValid = false;
     }
@@ -101,7 +131,11 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
+      // Only include password in payload if it's provided (for edit mode)
+      const submitData = editMode && !formData.password.trim() 
+        ? { name: formData.name, email: formData.email, roles: formData.roles, password: "" }
+        : formData;
+      onSubmit(submitData);
     }
   };
 
@@ -115,7 +149,9 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
       >
         {/* Header */}
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-800">Add Team Member</h3>
+          <h3 className="text-lg font-semibold text-gray-800">
+            {editMode ? "Edit Team Member" : "Add Team Member"}
+          </h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -160,9 +196,12 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                disabled={editMode} // Disable email editing
                 className={`w-full px-3 py-2 border ${
                   errors.email ? "border-red-500" : "border-gray-300"
-                } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+                } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                  editMode ? "bg-gray-100 cursor-not-allowed" : ""
+                }`}
                 placeholder="Enter email"
               />
               {errors.email && (
@@ -184,7 +223,10 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
                   errors.roles ? "border-red-500" : "border-gray-300"
                 } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
               >
-                <option value="member">Member</option>
+                <option value="purchase_order_member">Purchase Order Member</option>
+                <option value="production_member">Production Member</option>
+                <option value="dispatch_member">Dispatch Member</option>
+                <option value="accounts_member">Accounts Member</option>
                 <option value="admin">Admin</option>
               </select>
               {errors.roles && (
@@ -195,7 +237,7 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
             {/* Password */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password *
+                Password {editMode ? "(Leave blank to keep current)" : "*"}
               </label>
               <input
                 type="password"
@@ -206,7 +248,7 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
                 className={`w-full px-3 py-2 border ${
                   errors.password ? "border-red-500" : "border-gray-300"
                 } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
-                placeholder="Enter password"
+                placeholder={editMode ? "Enter new password (optional)" : "Enter password"}
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
@@ -234,10 +276,10 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
               {isLoading ? (
                 <div className="flex items-center">
                   <div className="w-4 h-4 border-t-2 border-r-2 border-white rounded-full animate-spin mr-2"></div>
-                  Creating...
+                  {editMode ? "Updating..." : "Creating..."}
                 </div>
               ) : (
-                "Add Member"
+                editMode ? "Update Member" : "Add Member"
               )}
             </button>
           </div>

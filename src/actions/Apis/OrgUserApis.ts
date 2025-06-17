@@ -19,7 +19,7 @@ const activateUser = async (id: string) => {
 }
 
 const editUser = async (id: string, data: any) => {
-    return ApiCalls.patchResponse(`/organization-users/${id}`, data, getCookie("token"))
+    return ApiCalls.putResponse(`/organization-users/${id}`, data, getCookie("token"))
 }
 
 const deleteUser = async (id: string) => {
