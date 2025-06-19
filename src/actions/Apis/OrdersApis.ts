@@ -31,8 +31,13 @@ const getRejectedOrders = async () => {
 }
 
 const reviewOrder = async (id: string, data: any) => {
-    return ApiCalls.patchResponse(`/orders/${id}/review`, data, getCookie("token"));
+    return ApiCalls.postResponse(`/orders/review/${id}`, data, getCookie("token"));
 }
+
+const updateStatus = async(id:string,data:any) =>{
+    return ApiCalls.patchResponse(`/orders/${id}/status`,data,getCookie("token"))
+}
+
 const OrderApis = {
     createOrder,
     getAllOrders,
@@ -41,7 +46,7 @@ const OrderApis = {
     getPendingOrders,
     getApprovedOrders,
     getRejectedOrders,
-    reviewOrder
+    reviewOrder,updateStatus
 }
 
 export default OrderApis;
