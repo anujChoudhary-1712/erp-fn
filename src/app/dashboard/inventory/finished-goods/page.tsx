@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { formatCurrency } from '@/utils/order';
 import { formatDate } from '@/utils/date';
+import EditGoodModal from '@/components/modal/EditGoodModal'; // Import the modal
 
 // TypeScript interface for Finished Good
 interface FinishedGood {
@@ -22,6 +23,11 @@ const FinishedGoodsPage = () => {
   const [goods, setGoods] = useState<FinishedGood[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  
+  // Modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [selectedGood, setSelectedGood] = useState<FinishedGood | null>(null);
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
   const fetchAllGoods = async() => {
     setLoading(true);
@@ -41,6 +47,37 @@ const FinishedGoodsPage = () => {
   useEffect(() => {
     fetchAllGoods();
   }, []);
+
+  const editGoods = async(id: string, current_stock: number, unit_price: number) => {
+    setIsUpdating(true);
+    try {
+      const res = await GoodsApis.updateFinishedGood(id, { current_stock, unit_price });
+      if(res.status === 200) {
+        await fetchAllGoods();
+        setIsEditModalOpen(false);
+        setSelectedGood(null);
+      }
+    } catch (error) {
+      console.error("Error updating product:", error);
+      alert("Failed to update product. Please try again.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleEditClick = (good: FinishedGood) => {
+    setSelectedGood(good);
+    setIsEditModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsEditModalOpen(false);
+    setSelectedGood(null);
+  };
+
+  const handleModalSubmit = (goodData: { id: string; current_stock: number; unit_price: number }) => {
+    editGoods(goodData.id, goodData.current_stock, goodData.unit_price);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -141,34 +178,48 @@ const FinishedGoodsPage = () => {
                         </div>
                       </div>
                       
-                      {/* Created Date */}
+                      {/* Created Date and Actions */}
                       <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
                         <div className="text-xs text-gray-500">
                           Added on {formatDate(product.createdAt)}
                         </div>
-                        <button 
-                          onClick={() => {
-                            if(window.confirm(`Are you sure you want to delete "${product.product_name}"?`)) {
-                              GoodsApis.deleteFinishedGood(product._id)
-                                .then(res => {
-                                  if(res.status === 200) {
-                                    // Remove deleted product from state
-                                    setGoods(prevGoods => prevGoods.filter(item => item._id !== product._id));
-                                  }
-                                })
-                                .catch(err => {
-                                  console.error("Error deleting product:", err);
-                                  alert("Failed to delete product. Please try again.");
-                                });
-                            }
-                          }}
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          aria-label="Delete product"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          {/* Edit Button */}
+                          <button 
+                            onClick={() => handleEditClick(product)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                            aria-label="Edit product"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          
+                          {/* Delete Button */}
+                          <button 
+                            onClick={() => {
+                              if(window.confirm(`Are you sure you want to delete "${product.product_name}"?`)) {
+                                GoodsApis.deleteFinishedGood(product._id)
+                                  .then(res => {
+                                    if(res.status === 200) {
+                                      // Remove deleted product from state
+                                      setGoods(prevGoods => prevGoods.filter(item => item._id !== product._id));
+                                    }
+                                  })
+                                  .catch(err => {
+                                    console.error("Error deleting product:", err);
+                                    alert("Failed to delete product. Please try again.");
+                                  });
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                            aria-label="Delete product"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -177,6 +228,15 @@ const FinishedGoodsPage = () => {
             )}
           </>
         )}
+
+        {/* Edit Good Modal */}
+        <EditGoodModal
+          isOpen={isEditModalOpen}
+          onClose={handleModalClose}
+          onSubmit={handleModalSubmit}
+          isLoading={isUpdating}
+          good={selectedGood}
+        />
       </div>
     </div>
   );
