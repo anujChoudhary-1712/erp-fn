@@ -28,17 +28,27 @@ const navigationItems = [
     icon: <Home size={20} />,
     href: "/dashboard",
   },
-    {
-      id: 'purchase-orders',
-      label: 'Purchase Orders',
-      icon: <ShoppingCart size={20} />,
-      href: '/dashboard/orders',
-      // children: [
-      //   { id: 'po-review', label: 'Order Review', icon: <CheckCircle size={16} />, href: '/dashboard/purchase-orders/review' },
-      //   { id: 'po-checklist', label: 'Order Checklist', icon: <FileText size={16} />, href: '/dashboard/purchase-orders/checklist' },
-      //   { id: 'finished-goods', label: 'Finished Goods Store', icon: <Package size={16} />, href: '/dashboard/purchase-orders/finished-goods' }
-      // ]
-    },
+  {
+    id: 'purchase-orders',
+    label: 'Purchase Orders',
+    icon: <ShoppingCart size={20} />,
+    href: '/dashboard/orders',
+    // children: [
+    //   { id: 'po-review', label: 'Order Review', icon: <CheckCircle size={16} />, href: '/dashboard/purchase-orders/review' },
+    //   { id: 'po-checklist', label: 'Order Checklist', icon: <FileText size={16} />, href: '/dashboard/purchase-orders/checklist' },
+    //   { id: 'finished-goods', label: 'Finished Goods Store', icon: <Package size={16} />, href: '/dashboard/purchase-orders/finished-goods' }
+    // ]
+  },
+  {
+    id: 'inventory',
+    label: 'Inventory',
+    icon: <Package size={20} />,
+    href: '/dashboard/inventory',
+    children: [
+      { id: 'finished-goods', label: 'Finished Goods', icon: <Package size={16} />, href: '/dashboard/inventory/finished-goods' },
+      // { id: 'raw-materials', label: 'Raw Materials', icon: <Package size={16} />, href: '/dashboard/inventory/raw-materials' }
+    ]
+  },
   //   {
   //     id: 'production',
   //     label: 'Production Planning',
@@ -145,6 +155,12 @@ const mainTabItems = [
     href: "/dashboard/orders",
     badge: 5,
   },
+  {
+    id: "inventory",
+    label: "Inventory",
+    icon: <Package size={20} />,
+    href: "/dashboard/inventory",
+  },
   //   {
   //     id: 'production',
   //     label: 'Production',
@@ -180,7 +196,7 @@ const mainTabItems = [
 ];
 
 // More menu items for mobile navigation
-const moreMenuItems = [
+const moreMenuItems: { id: string; label: string; icon: JSX.Element; href: string; badge?: number; children?: { id: string; label: string; icon: JSX.Element; href: string; }[]; }[] = [
   //   {
   //     id: 'dispatch',
   //     label: 'Dispatch & Accounts',
@@ -289,7 +305,7 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
       <div className="lg:hidden">
         <MobileNavigation
           mainTabItems={mainTabItems}
-          moreMenuItems={[]}
+          moreMenuItems={moreMenuItems}
           currentPath={currentPath}
         />
       </div>

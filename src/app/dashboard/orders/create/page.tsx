@@ -14,6 +14,7 @@ interface Customer {
 }
 
 interface OrderItem {
+  productId: string;
   name: string;
   unit: string;
   unit_price: number;
@@ -55,6 +56,7 @@ const CreateOrderPage: React.FC = () => {
           unit: item.unit,
           unit_price: Number(item.unit_price),
           quantity: Number(item.quantity),
+          productId:item.productId
         })),
         total_amount: Number(data.total_amount),
         org_id: user?.organizationId || "", // Ensure org_id is set

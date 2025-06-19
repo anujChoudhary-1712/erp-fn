@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InputField from '@/components/ReusableComponents/InputField';
 import Button from '@/components/ReusableComponents/Button';
+import GoodsApis from '@/actions/Apis/GoodsApis';
+import { formatCurrency } from '@/utils/order';
 
 // TypeScript interfaces
 interface Customer {
@@ -10,6 +12,7 @@ interface Customer {
 }
 
 interface OrderItem {
+  productId: string;
   name: string;
   unit: string;
   unit_price: number;
@@ -22,6 +25,15 @@ interface OrderFormData {
   customer: Customer;
   order_items: OrderItem[];
   total_amount: number;
+}
+
+interface FinishedGood {
+  _id: string;
+  product_name: string;
+  description: string;
+  unit: string;
+  current_stock: number;
+  unit_price: number;
 }
 
 interface CreateOrderFormProps {
@@ -40,8 +52,9 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
     },
     order_items: [
       {
+        productId: '',
         name: '',
-        unit: 'piece',
+        unit: '',
         unit_price: 0,
         quantity: 1,
       }
@@ -50,16 +63,27 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [products, setProducts] = useState<FinishedGood[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(false);
 
-  // Unit options for order items
-  const unitOptions = [
-    { value: 'piece', label: 'Piece' },
-    { value: 'kg', label: 'Kilogram' },
-    { value: 'liter', label: 'Liter' },
-    { value: 'meter', label: 'Meter' },
-    { value: 'box', label: 'Box' },
-    { value: 'pack', label: 'Pack' },
-  ];
+  // Fetch products on component mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoadingProducts(true);
+      try {
+        const response = await GoodsApis.getAllGoods();
+        if (response.status === 200) {
+          setProducts(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // Calculate total amount whenever order items change
   const calculateTotal = (items: OrderItem[]): number => {
@@ -90,6 +114,16 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
       [field]: value,
     };
 
+    // If productId is changing, update name, unit, and unit_price
+    if (field === 'productId') {
+      const selectedProduct = products.find(p => p._id === value);
+      if (selectedProduct) {
+        updatedItems[index].name = selectedProduct.product_name;
+        updatedItems[index].unit = selectedProduct.unit;
+        updatedItems[index].unit_price = selectedProduct.unit_price;
+      }
+    }
+
     const newTotal = calculateTotal(updatedItems);
     
     setFormData(prev => ({
@@ -111,8 +145,9 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
       order_items: [
         ...prev.order_items,
         {
+          productId: '',
           name: '',
-          unit: 'piece',
+          unit: '',
           unit_price: 0,
           quantity: 1,
         }
@@ -160,14 +195,16 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
 
     // Order items validation
     formData.order_items.forEach((item, index) => {
-      if (!item.name.trim()) {
-        newErrors[`order_items.${index}.name`] = 'Item name is required';
-      }
-      if (item.unit_price <= 0) {
-        newErrors[`order_items.${index}.unit_price`] = 'Unit price must be greater than 0';
+      if (!item.productId) {
+        newErrors[`order_items.${index}.productId`] = 'Please select a product';
       }
       if (item.quantity <= 0) {
         newErrors[`order_items.${index}.quantity`] = 'Quantity must be greater than 0';
+      }
+      // Find the product to check stock
+      const product = products.find(p => p._id === item.productId);
+      if (product && item.quantity > product.current_stock) {
+        newErrors[`order_items.${index}.quantity`] = `Only ${product.current_stock} units available in stock`;
       }
     });
 
@@ -254,92 +291,104 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
           </Button>
         </div>
 
-        <div className="space-y-4">
-          {formData.order_items.map((item, index) => (
-            <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-md font-medium text-gray-800">Item {index + 1}</h4>
-                {formData.order_items.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    onClick={() => removeOrderItem(index)}
-                    className="text-xs px-2 py-1"
-                  >
-                    Remove
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="lg:col-span-2">
-                  <InputField
-                    label="Item Name"
-                    value={item.name}
-                    onChange={(e) => updateOrderItem(index, 'name', e.target.value)}
-                    placeholder="Enter item name"
-                    required
-                    error={errors[`order_items.${index}.name`]}
-                  />
+        {loadingProducts ? (
+          <div className="flex justify-center items-center p-6">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            <span className="ml-2 text-gray-600">Loading products...</span>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {formData.order_items.map((item, index) => (
+              <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-md font-medium text-gray-800">Item {index + 1}</h4>
+                  {formData.order_items.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      onClick={() => removeOrderItem(index)}
+                      className="text-xs px-2 py-1"
+                    >
+                      Remove
+                    </Button>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">
-                    Unit <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={item.unit}
-                    onChange={(e) => updateOrderItem(index, 'unit', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    {unitOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="lg:col-span-2">
+                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                      Product <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      value={item.productId}
+                      onChange={(e) => updateOrderItem(index, 'productId', e.target.value)}
+                      className={`w-full px-3 py-2 border ${
+                        errors[`order_items.${index}.productId`] ? 'border-red-500' : 'border-gray-300'
+                      } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                      required
+                    >
+                      <option value="">Select a product</option>
+                      {products.map((product) => (
+                        <option key={product._id} value={product._id}>
+                          {product.product_name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors[`order_items.${index}.productId`] && (
+                      <p className="mt-1 text-sm text-red-600">{errors[`order_items.${index}.productId`]}</p>
+                    )}
+                  </div>
 
-                <div>
-                  <InputField
-                    label="Unit Price"
-                    type="number"
-                    value={item.unit_price}
-                    onChange={(e) => updateOrderItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    required
-                    error={errors[`order_items.${index}.unit_price`]}
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                      Unit
+                    </label>
+                    <input
+                      type="text"
+                      value={item.unit}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700"
+                      disabled
+                    />
+                  </div>
 
-                <div>
-                  <InputField
-                    label="Quantity"
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                    placeholder="1"
-                    min="1"
-                    required
-                    error={errors[`order_items.${index}.quantity`]}
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                      Unit Price
+                    </label>
+                    <input
+                      type="number"
+                      value={item.unit_price}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700"
+                      disabled
+                    />
+                  </div>
 
-                <div className="lg:col-span-4">
-                  <div className="text-right">
-                    <span className="text-sm text-gray-600">Subtotal: </span>
-                    <span className="text-lg font-semibold text-gray-900">
-                      ${(item.unit_price * item.quantity).toFixed(2)}
-                    </span>
+                  <div>
+                    <InputField
+                      label="Quantity"
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                      placeholder="1"
+                      min="1"
+                      required
+                      error={errors[`order_items.${index}.quantity`]}
+                    />
+                  </div>
+
+                  <div className="lg:col-span-4">
+                    <div className="text-right">
+                      <span className="text-sm text-gray-600">Subtotal: </span>
+                      <span className="text-lg font-semibold text-gray-900">
+                        {formatCurrency(item.unit_price * item.quantity)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Order Summary */}
@@ -347,7 +396,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h3>
         <div className="flex justify-between items-center text-xl font-bold text-gray-900">
           <span>Total Amount:</span>
-          <span>${formData.total_amount.toFixed(2)}</span>
+          <span>{formatCurrency(formData.total_amount)}</span>
         </div>
       </div>
 
