@@ -291,7 +291,7 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Main Content Header */}
-        <MobileHeader companyName="Company Name" userName="John Smith" />
+        <MobileHeader companyName="test org" userName="Anuj Choudhary" />
         {/* Main Content */}
         <main className="flex-1 md:overflow-auto pb-20 md:pb-0">
           <div className="h-full">

@@ -61,7 +61,7 @@ const OrdersPage: React.FC = () => {
         (order) => order.status?.toLowerCase() === "reject"
       ).length,
       approved: orders.filter(
-        (order) => order.status?.toLowerCase() === "approve"
+        (order) => order.status?.toLowerCase() === "approved"
       ).length,
     };
     return counts;

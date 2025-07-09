@@ -201,11 +201,6 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
       if (item.quantity <= 0) {
         newErrors[`order_items.${index}.quantity`] = 'Quantity must be greater than 0';
       }
-      // Find the product to check stock
-      const product = products.find(p => p._id === item.productId);
-      if (product && item.quantity > product.current_stock) {
-        newErrors[`order_items.${index}.quantity`] = `Only ${product.current_stock} units available in stock`;
-      }
     });
 
     setErrors(newErrors);

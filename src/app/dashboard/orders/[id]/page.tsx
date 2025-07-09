@@ -196,7 +196,7 @@ const OrderDetailsPage: React.FC = () => {
         review_checklist: reviewChecklist
       });
       if (res.status === 200) {
-        setOrder({ ...order, status: "approve" });
+        setOrder({ ...order, status: "approved" });
         setReason(""); // Clear reason after successful action
         // Reset checklist
         setReviewChecklist({
@@ -478,7 +478,7 @@ const OrderDetailsPage: React.FC = () => {
           </div>
 
           {/* Review Details - Show when order has been reviewed */}
-          {(order.status === "approve" || order.status === "rejected") && order.review_checklist && (
+          {(order.status === "approved" || order.status === "rejected") && order.review_checklist && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Review Details
@@ -519,7 +519,7 @@ const OrderDetailsPage: React.FC = () => {
                       )}
 
           {/* Production Actions - Show when status is approve */}
-          {order.status === "approve" && (
+          {order.status === "approved" && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Production Actions
