@@ -46,31 +46,30 @@ const navigationItems = [
     href: '/dashboard/inventory',
     children: [
       { id: 'finished-goods', label: 'Finished Goods', icon: <Package size={16} />, href: '/dashboard/inventory/finished-goods' },
-      // { id: 'raw-materials', label: 'Raw Materials', icon: <Package size={16} />, href: '/dashboard/inventory/raw-materials' }
+      { id: 'raw-materials', label: 'Raw Materials', icon: <Package size={16} />, href: '/dashboard/inventory/materials' }
     ]
   },
-  //   {
-  //     id: 'production',
-  //     label: 'Production Planning',
-  //     icon: <Calendar size={20} />,
-  //     href: '/dashboard/production',
-  //     children: [
-  //       { id: 'monthly-planning', label: 'Monthly Planning', icon: <Calendar size={16} />, href: '/dashboard/production/monthly' },
-  //       { id: 'weekly-planning', label: 'Weekly Planning', icon: <Calendar size={16} />, href: '/dashboard/production/weekly' },
-  //       { id: 'daily-planning', label: 'Daily Planning', icon: <Calendar size={16} />, href: '/dashboard/production/daily' },
-  //       { id: 'raw-materials', label: 'Raw Material Requirements', icon: <Package size={16} />, href: '/dashboard/production/raw-materials' }
-  //     ]
-  //   },
-  //   {
-  //     id: 'vendors',
-  //     label: 'Vendor Management',
-  //     icon: <Users size={20} />,
-  //     href: '/dashboard/vendors',
-  //     children: [
-  //       { id: 'vendor-evaluation', label: 'Vendor Evaluation', icon: <CheckCircle size={16} />, href: '/dashboard/vendors/evaluation' },
-  //       { id: 'purchase-verification', label: 'Purchase Verification', icon: <FileText size={16} />, href: '/dashboard/vendors/verification' }
-  //     ]
-  //   },
+  {
+    id: 'production',
+    label: 'Production Planning',
+    icon: <Calendar size={20} />,
+    href: '/dashboard/planning',
+    children: [
+      { id: 'purchase-materials', label: 'Purchase Materials', icon: <ShoppingCart size={16} />, href: '/dashboard/planning/purchase' }
+    ]
+  },
+  {
+    id: 'vendors',
+    label: 'Vendors',
+    icon: <Users size={20} />,
+    href: '/dashboard/vendors',
+  },
+  {
+    id: 'documents',
+    label: 'Documents',
+    icon: <FileText size={20} />,
+    href: '/dashboard/documents',
+  },
   //   {
   //     id: 'production-stage',
   //     label: 'Production Stage',
@@ -114,18 +113,6 @@ const navigationItems = [
   //       { id: 'complaints', label: 'Complaint Management', icon: <FileText size={16} />, href: '/dashboard/returns/complaints' }
   //     ]
   //   },
-  //   {
-  //     id: 'documents',
-  //     label: 'Document Management',
-  //     icon: <FileText size={20} />,
-  //     href: '/dashboard/documents',
-  //     children: [
-  //       { id: 'iso-docs', label: 'ISO Documents', icon: <FileText size={16} />, href: '/dashboard/documents/iso' },
-  //       { id: 'bis-docs', label: 'BIS Documents', icon: <FileText size={16} />, href: '/dashboard/documents/bis' },
-  //       { id: 'qms-docs', label: 'QMS Documents', icon: <FileText size={16} />, href: '/dashboard/documents/qms' },
-  //       { id: 'doc-review', label: 'Document Review', icon: <CheckCircle size={16} />, href: '/dashboard/documents/review' }
-  //     ]
-  //   },
   // {
   //   id: "settings",
   //   label: "Settings",
@@ -161,26 +148,12 @@ const mainTabItems = [
     icon: <Package size={20} />,
     href: "/dashboard/inventory",
   },
-  //   {
-  //     id: 'production',
-  //     label: 'Production',
-  //     icon: <Factory size={20} />,
-  //     href: '/dashboard/production',
-  //     badge: 4
-  //   },
-  //   {
-  //     id: 'quality',
-  //     label: 'Quality',
-  //     icon: <CheckCircle size={20} />,
-  //     href: '/dashboard/quality-check',
-  //     badge: 3
-  //   },
-  //   {
-  //     id: 'more',
-  //     label: 'More',
-  //     icon: <MoreHorizontal size={20} />,
-  //     href: '/dashboard/more'
-  //   }
+  {
+    id: 'more',
+    label: 'More',
+    icon: <MoreHorizontal size={20} />,
+    href: '/dashboard/more'
+  },
   // {
   //   id: "settings",
   //   label: "Settings",
@@ -197,6 +170,27 @@ const mainTabItems = [
 
 // More menu items for mobile navigation
 const moreMenuItems: { id: string; label: string; icon: JSX.Element; href: string; badge?: number; children?: { id: string; label: string; icon: JSX.Element; href: string; }[]; }[] = [
+  {
+    id: 'production',
+    label: 'Production Planning',
+    icon: <Calendar size={20} />,
+    href: '/dashboard/planning',
+    children: [
+      { id: 'purchase-materials', label: 'Purchase Materials', icon: <ShoppingCart size={16} />, href: '/dashboard/planning/purchase' }
+    ]
+  },
+  {
+    id: 'vendors',
+    label: 'Vendors',
+    icon: <Users size={20} />,
+    href: '/dashboard/vendors',
+  },
+  {
+    id: 'documents',
+    label: 'Documents',
+    icon: <FileText size={20} />,
+    href: '/dashboard/documents',
+  },
   //   {
   //     id: 'dispatch',
   //     label: 'Dispatch & Accounts',
@@ -217,26 +211,6 @@ const moreMenuItems: { id: string; label: string; icon: JSX.Element; href: strin
   //     children: [
   //       { id: 'return-handling', label: 'Handle returns and customer issues', icon: <RotateCcw size={16} />, href: '/dashboard/returns/handling' },
   //       { id: 'complaints', label: 'Complaint Management', icon: <FileText size={16} />, href: '/dashboard/returns/complaints' }
-  //     ]
-  //   },
-  //   {
-  //     id: 'documents',
-  //     label: 'Documents',
-  //     icon: <FileText size={20} />,
-  //     href: '/dashboard/documents',
-  //     children: [
-  //       { id: 'iso-docs', label: 'Access all company documents', icon: <FileText size={16} />, href: '/dashboard/documents/all' },
-  //       { id: 'doc-review', label: 'Document Review', icon: <CheckCircle size={16} />, href: '/dashboard/documents/review' }
-  //     ]
-  //   },
-  //   {
-  //     id: 'vendors',
-  //     label: 'Vendor Management',
-  //     icon: <Users size={20} />,
-  //     href: '/dashboard/vendors',
-  //     children: [
-  //       { id: 'vendor-evaluation', label: 'Vendor Evaluation', icon: <CheckCircle size={16} />, href: '/dashboard/vendors/evaluation' },
-  //       { id: 'purchase-verification', label: 'Purchase Verification', icon: <FileText size={16} />, href: '/dashboard/vendors/verification' }
   //     ]
   //   },
   //   {

@@ -69,8 +69,8 @@ const InventoryPage = () => {
           </div>
 
           {/* Raw Materials Card */}
-          {/* <div 
-            onClick={() => router.push('/dashboard/inventory/raw-materials')}
+          <div 
+            onClick={() => router.push('/dashboard/inventory/materials')}
             className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
           >
             <div className="p-6 flex flex-col h-full">
@@ -90,7 +90,7 @@ const InventoryPage = () => {
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
-          </div> */}
+          </div>
         </div>
 
         {/* Quick Actions */}

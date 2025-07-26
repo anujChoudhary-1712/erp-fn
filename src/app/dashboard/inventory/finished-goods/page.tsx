@@ -14,6 +14,7 @@ interface FinishedGood {
   unit: string;
   current_stock: number;
   unit_price: number;
+  trigger_value: number;
   org_id: string;
   createdAt: string;
   updatedAt: string;
@@ -142,19 +143,22 @@ const FinishedGoodsPage = () => {
                 {goods.map((product) => (
                   <div 
                     key={product._id} 
+                    // onClick={()=>{
+                    //   window.location.href = `/dashboard/inventory/finished-goods/${product._id}`;
+                    // }}
                     className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                   >
                     <div className="p-5">
                       <div className="flex justify-between items-start">
                         <h3 className="text-xl font-semibold text-gray-900 line-clamp-2">{product.product_name}</h3>
                         <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                          product.current_stock > 10 
+                          product.current_stock > product.trigger_value 
                             ? 'bg-green-100 text-green-800' 
                             : product.current_stock > 0 
                               ? 'bg-yellow-100 text-yellow-800' 
                               : 'bg-red-100 text-red-800'
                         }`}>
-                          {product.current_stock > 10 
+                          {product.current_stock > product.trigger_value 
                             ? 'In Stock' 
                             : product.current_stock > 0 
                               ? 'Low Stock' 

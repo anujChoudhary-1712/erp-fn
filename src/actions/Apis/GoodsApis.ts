@@ -10,6 +10,10 @@ const getAllGoods = async () => {
     return ApiCalls.getResponse("/finished-goods", {}, getCookie("token"));
 }
 
+const getSingleGood = async (id:string) =>{
+    return ApiCalls.getResponse(`/finished-goods/${id}`, {}, getCookie("token"));
+}
+
 const updateFinishedGood = async (id: string, data: any) => {
     return ApiCalls.putResponse(`/finished-goods/${id}`, data, getCookie("token"));
 }
@@ -23,7 +27,7 @@ const checkGoodAvailability = async (data: any) => {
 }
 
 const GoodsApis = {
-    createFinishedGood, getAllGoods, updateFinishedGood, deleteFinishedGood, checkGoodAvailability
+    createFinishedGood, getAllGoods, updateFinishedGood, deleteFinishedGood, checkGoodAvailability,getSingleGood
 }
 
 export default GoodsApis
