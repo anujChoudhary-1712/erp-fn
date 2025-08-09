@@ -1,3 +1,5 @@
+// src/components/forms/CreateOrderForm.tsx
+
 import React, { useState, useEffect } from 'react';
 import InputField from '@/components/ReusableComponents/InputField';
 import Button from '@/components/ReusableComponents/Button';
@@ -9,6 +11,7 @@ interface Customer {
   name: string;
   phone: string;
   address: string;
+  gst_no: string; // New field
 }
 
 interface OrderItem {
@@ -25,6 +28,10 @@ interface OrderFormData {
   customer: Customer;
   order_items: OrderItem[];
   total_amount: number;
+  notes: string; // New field, call this instruction
+  company_po_number: string; // New field
+  mode_of_receiving: string; // New field
+  contact_name: string; // New field
 }
 
 interface FinishedGood {
@@ -49,6 +56,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
       name: '',
       phone: '',
       address: '',
+      gst_no: '', // New field
     },
     order_items: [
       {
@@ -60,6 +68,10 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
       }
     ],
     total_amount: 0,
+    notes: '',
+    company_po_number: '',
+    mode_of_receiving: '',
+    contact_name: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -103,6 +115,27 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
     // Clear error for this field
     if (errors[`customer.${field}`]) {
       setErrors(prev => ({ ...prev, [`customer.${field}`]: '' }));
+    }
+  };
+  
+  // Update order details (new fields)
+  const updateOrderDetails = (field: keyof OrderFormData, value: string): void => {
+    setFormData(prev => {
+        const updatedData = { ...prev, [field]: value };
+        
+        // Logic to clear contact_name if mode_of_receiving changes
+        if (field === 'mode_of_receiving') {
+            const verbalModes = ['Telephone', 'verbal', 'whatsapp'];
+            if (!verbalModes.includes(value)) {
+                updatedData.contact_name = '';
+            }
+        }
+        
+        return updatedData;
+    });
+
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -185,6 +218,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
     if (!formData.customer.address.trim()) {
       newErrors['customer.address'] = 'Address is required';
     }
+    // GST number is not required based on the user's request.
 
     // Date validation
     if (!formData.expected_delivery_date) {
@@ -215,6 +249,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
       await onSubmit(formData);
     }
   };
+  
+  const isVerbalMode = ['Telephone', 'verbal', 'whatsapp'].includes(formData.mode_of_receiving);
 
   return (
     <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8">
@@ -240,14 +276,23 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
             type='number'
           />
         </div>
-        <InputField
-          label="Address"
-          value={formData.customer.address}
-          onChange={(e) => updateCustomer('address', e.target.value)}
-          placeholder="Enter complete address"
-          required
-          error={errors['customer.address']}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <InputField
+            label="GST No."
+            value={formData.customer.gst_no}
+            onChange={(e) => updateCustomer('gst_no', e.target.value)}
+            placeholder="Enter GST number (optional)"
+            error={errors['customer.gst_no']}
+          />
+          <InputField
+            label="Address"
+            value={formData.customer.address}
+            onChange={(e) => updateCustomer('address', e.target.value)}
+            placeholder="Enter complete address"
+            required
+            error={errors['customer.address']}
+          />
+        </div>
       </div>
 
       {/* Order Details */}
@@ -258,16 +303,58 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({ onSubmit, loading = f
             label="Order Date"
             type="date"
             value={formData.order_date}
-            onChange={(e) => setFormData(prev => ({ ...prev, order_date: e.target.value }))}
+            onChange={(e) => updateOrderDetails('order_date', e.target.value)}
             required
           />
           <InputField
             label="Expected Delivery Date"
             type="date"
             value={formData.expected_delivery_date}
-            onChange={(e) => setFormData(prev => ({ ...prev, expected_delivery_date: e.target.value }))}
+            onChange={(e) => updateOrderDetails('expected_delivery_date', e.target.value)}
             required
             error={errors['expected_delivery_date']}
+          />
+          <InputField
+            label="Company PO Number"
+            value={formData.company_po_number}
+            onChange={(e) => updateOrderDetails('company_po_number', e.target.value)}
+            placeholder="Enter company PO number (optional)"
+            error={errors['company_po_number']}
+          />
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Mode of Receiving
+            </label>
+            <select
+              value={formData.mode_of_receiving}
+              onChange={(e) => updateOrderDetails('mode_of_receiving', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select mode (optional)</option>
+              <option value="Telephone">Telephone</option>
+              <option value="email">Email</option>
+              <option value="written">Written</option>
+              <option value="verbal">Verbal</option>
+              <option value="whatsapp">Whatsapp</option>
+              <option value="Govt tenders">Govt tenders</option>
+            </select>
+          </div>
+          {isVerbalMode && (
+            <InputField
+              label="Contact Name"
+              value={formData.contact_name}
+              onChange={(e) => updateOrderDetails('contact_name', e.target.value)}
+              placeholder="Enter contact name (optional)"
+              error={errors['contact_name']}
+            />
+          )}
+          <InputField
+            label="Instructions"
+            type="textarea"
+            value={formData.notes}
+            onChange={(e) => updateOrderDetails('notes', e.target.value)}
+            placeholder="Add any specific instructions for this order (optional)"
+            className="md:col-span-2"
           />
         </div>
       </div>
