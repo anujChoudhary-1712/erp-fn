@@ -106,7 +106,7 @@ const MobileNavigation: React.FC<MobileNavProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 h-[80vh]">
         <div className="space-y-4">
           {moreMenuItems.map((item) => (
             <div

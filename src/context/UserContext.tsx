@@ -13,6 +13,7 @@ import { getCookie, removeCookie } from "@/actions/CookieUtils";
 
 // Define the user interface based on your JWT token structure
 interface User {
+  orgName: string;
   id: string;
   roles: string[];
   userType: string;

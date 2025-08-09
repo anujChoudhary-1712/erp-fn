@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import React from "react";
@@ -17,228 +18,95 @@ import {
   Settings,
   MoreHorizontal,
   User,
+  Wrench,
+  ClipboardList,
+  AlertCircle,
 } from "lucide-react";
 import MobileHeader from "./ReusableComponents/MobileHeader";
+import { useUser } from "@/context/UserContext";
+import { usePathname } from "next/navigation";
 
-// Define navigation items
-const navigationItems = [
+// Define all navigation items with their required roles
+const allNavigationItems = [
   {
     id: "dashboard",
     label: "Dashboard",
     icon: <Home size={20} />,
     href: "/dashboard",
+    requiredRoles: ["dashboard", "admin"],
   },
   {
-    id: 'purchase-orders',
-    label: 'Purchase Orders',
+    id: 'orders',
+    label: 'Orders',
     icon: <ShoppingCart size={20} />,
     href: '/dashboard/orders',
-    // children: [
-    //   { id: 'po-review', label: 'Order Review', icon: <CheckCircle size={16} />, href: '/dashboard/purchase-orders/review' },
-    //   { id: 'po-checklist', label: 'Order Checklist', icon: <FileText size={16} />, href: '/dashboard/purchase-orders/checklist' },
-    //   { id: 'finished-goods', label: 'Finished Goods Store', icon: <Package size={16} />, href: '/dashboard/purchase-orders/finished-goods' }
-    // ]
+    requiredRoles: ["order_mgt", "admin"],
   },
   {
-    id: 'inventory',
-    label: 'Inventory',
+    id: 'store',
+    label: 'Store',
     icon: <Package size={20} />,
     href: '/dashboard/inventory',
+    requiredRoles: ["store_mgt", "admin"],
     children: [
-      { id: 'finished-goods', label: 'Finished Goods', icon: <Package size={16} />, href: '/dashboard/inventory/finished-goods' },
-      { id: 'raw-materials', label: 'Raw Materials', icon: <Package size={16} />, href: '/dashboard/inventory/materials' }
+      { id: 'finished-goods', label: 'Finished Goods', icon: <Package size={16} />, href: '/dashboard/inventory/finished-goods', requiredRoles: ["store_mgt", "admin"] },
+      { id: 'raw-materials', label: 'Raw Materials', icon: <Package size={16} />, href: '/dashboard/inventory/materials', requiredRoles: ["store_mgt", "admin"] }
     ]
   },
   {
-    id: 'production',
-    label: 'Production Planning',
-    icon: <Calendar size={20} />,
-    href: '/dashboard/planning',
-    children: [
-      { id: 'purchase-materials', label: 'Purchase Materials', icon: <ShoppingCart size={16} />, href: '/dashboard/planning/purchase' }
-    ]
+    id: 'purchase-request',
+    label: 'Purchase Request',
+    icon: <ClipboardList size={20} />,
+    href: '/dashboard/purchases',
+    requiredRoles: ["*"], // Available to everyone
   },
   {
     id: 'vendors',
     label: 'Vendors',
     icon: <Users size={20} />,
     href: '/dashboard/vendors',
+    requiredRoles: ["vendors_mgt", "admin"],
   },
   {
     id: 'documents',
     label: 'Documents',
     icon: <FileText size={20} />,
     href: '/dashboard/documents',
+    requiredRoles: ["document_mgt", "admin"],
   },
-  //   {
-  //     id: 'production-stage',
-  //     label: 'Production Stage',
-  //     icon: <Factory size={20} />,
-  //     href: '/dashboard/production-stage',
-  //     children: [
-  //       { id: 'cutting', label: 'Cutting', icon: <Factory size={16} />, href: '/dashboard/production-stage/cutting' },
-  //       { id: 'stitching', label: 'Stitching', icon: <Factory size={16} />, href: '/dashboard/production-stage/stitching' },
-  //       { id: 'folding', label: 'Folding', icon: <Factory size={16} />, href: '/dashboard/production-stage/folding' },
-  //       { id: 'packing', label: 'Packing', icon: <Package size={16} />, href: '/dashboard/production-stage/packing' }
-  //     ]
-  //   },
-  //   {
-  //     id: 'quality-check',
-  //     label: 'Quality Control',
-  //     icon: <CheckCircle size={20} />,
-  //     href: '/dashboard/quality-check',
-  //     children: [
-  //       { id: 'qc-inspection', label: 'Quality Inspection', icon: <CheckCircle size={16} />, href: '/dashboard/quality-check/inspection' },
-  //       { id: 'rework', label: 'Rework Management', icon: <RotateCcw size={16} />, href: '/dashboard/quality-check/rework' },
-  //       { id: 'rejection', label: 'Rejection Handling', icon: <FileText size={16} />, href: '/dashboard/quality-check/rejection' }
-  //     ]
-  //   },
-  //   {
-  //     id: 'dispatch',
-  //     label: 'Dispatch & Accounts',
-  //     icon: <Truck size={20} />,
-  //     href: '/dashboard/dispatch',
-  //     children: [
-  //       { id: 'dispatch-approval', label: 'Dispatch Approval', icon: <CheckCircle size={16} />, href: '/dashboard/dispatch/approval' },
-  //       { id: 'invoicing', label: 'Invoicing', icon: <FileText size={16} />, href: '/dashboard/dispatch/invoicing' }
-  //     ]
-  //   },
-  //   {
-  //     id: 'returns',
-  //     label: 'Returns & Complaints',
-  //     icon: <RotateCcw size={20} />,
-  //     href: '/dashboard/returns',
-  //     children: [
-  //       { id: 'return-handling', label: 'Return Handling', icon: <RotateCcw size={16} />, href: '/dashboard/returns/handling' },
-  //       { id: 'complaints', label: 'Complaint Management', icon: <FileText size={16} />, href: '/dashboard/returns/complaints' }
-  //     ]
-  //   },
-  // {
-  //   id: "settings",
-  //   label: "Settings",
-  //   icon: <Settings size={20} />,
-  //   href: "/dashboard/settings",
-  // },
   {
-    id: "team",
-    label: "Team",
+    id: 'machinery',
+    label: 'Machinery',
+    icon: <Wrench size={20} />,
+    href: '/dashboard/machinery',
+    requiredRoles: ["machinery_mgt", "admin"],
+  },
+  {
+    id: 'report-n-complaint',
+    label: 'Report & Complaint',
+    icon: <FileText size={20} />,
+    href: '/dashboard/report',
+    requiredRoles: ["report", "admin"],
+  },
+  {
+    id: 'personnel',
+    label: 'Personnel',
     icon: <User size={20} />,
-    href: "/dashboard/team",
-  },
-];
-
-// Main tab items for mobile navigation (bottom tabs)
-const mainTabItems = [
-  {
-    id: "home",
-    label: "Home",
-    icon: <Home size={20} />,
-    href: "/dashboard",
-  },
-  {
-    id: "orders",
-    label: "Orders",
-    icon: <ShoppingCart size={20} />,
-    href: "/dashboard/orders",
-    badge: 5,
-  },
-  {
-    id: "inventory",
-    label: "Inventory",
-    icon: <Package size={20} />,
-    href: "/dashboard/inventory",
-  },
-  {
-    id: 'more',
-    label: 'More',
-    icon: <MoreHorizontal size={20} />,
-    href: '/dashboard/more'
-  },
-  // {
-  //   id: "settings",
-  //   label: "Settings",
-  //   icon: <Settings size={20} />,
-  //   href: "/dashboard/settings",
-  // },
-  {
-    id: "team",
-    label: "Team",
-    icon: <User size={20} />,
-    href: "/dashboard/team",
-  },
-];
-
-// More menu items for mobile navigation
-const moreMenuItems: { id: string; label: string; icon: JSX.Element; href: string; badge?: number; children?: { id: string; label: string; icon: JSX.Element; href: string; }[]; }[] = [
-  {
-    id: 'production',
-    label: 'Production Planning',
-    icon: <Calendar size={20} />,
-    href: '/dashboard/planning',
+    href: '/dashboard/personnel',
+    requiredRoles: ["admin"], // Only admin can access personnel management
     children: [
-      { id: 'purchase-materials', label: 'Purchase Materials', icon: <ShoppingCart size={16} />, href: '/dashboard/planning/purchase' }
+      { id: 'personnel-team', label: 'Team', icon: <Users size={16} />, href: '/dashboard/personnel/team', requiredRoles: ["admin"] },
+      { id: 'training-plans', label: 'Training plans', icon: <Calendar size={16} />, href: '/dashboard/personnel/training-plan', requiredRoles: ["admin"] }
     ]
   },
-  {
-    id: 'vendors',
-    label: 'Vendors',
-    icon: <Users size={20} />,
-    href: '/dashboard/vendors',
-  },
-  {
-    id: 'documents',
-    label: 'Documents',
-    icon: <FileText size={20} />,
-    href: '/dashboard/documents',
-  },
-  //   {
-  //     id: 'dispatch',
-  //     label: 'Dispatch & Accounts',
-  //     icon: <Truck size={20} />,
-  //     href: '/dashboard/dispatch',
-  //     badge: 2,
-  //     children: [
-  //       { id: 'dispatch-approval', label: 'Dispatch Approval', icon: <CheckCircle size={16} />, href: '/dashboard/dispatch/approval' },
-  //       { id: 'invoicing', label: 'Invoicing', icon: <FileText size={16} />, href: '/dashboard/dispatch/invoicing' }
-  //     ]
-  //   },
-  //   {
-  //     id: 'returns',
-  //     label: 'Returns & Complaints',
-  //     icon: <RotateCcw size={20} />,
-  //     href: '/dashboard/returns',
-  //     badge: 1,
-  //     children: [
-  //       { id: 'return-handling', label: 'Handle returns and customer issues', icon: <RotateCcw size={16} />, href: '/dashboard/returns/handling' },
-  //       { id: 'complaints', label: 'Complaint Management', icon: <FileText size={16} />, href: '/dashboard/returns/complaints' }
-  //     ]
-  //   },
-  //   {
-  //     id: 'production-stage',
-  //     label: 'Production Stage',
-  //     icon: <Factory size={20} />,
-  //     href: '/dashboard/production-stage',
-  //     children: [
-  //       { id: 'cutting', label: 'Cutting Stage', icon: <Factory size={16} />, href: '/dashboard/production-stage/cutting' },
-  //       { id: 'stitching', label: 'Stitching Stage', icon: <Factory size={16} />, href: '/dashboard/production-stage/stitching' },
-  //       { id: 'folding', label: 'Folding Stage', icon: <Factory size={16} />, href: '/dashboard/production-stage/folding' },
-  //       { id: 'packing', label: 'Packing Stage', icon: <Package size={16} />, href: '/dashboard/production-stage/packing' }
-  //     ]
-  //   },
-  // {
-  //   id: "settings",
-  //   label: "Settings",
-  //   icon: <Settings size={20} />,
-  //   href: "/dashboard/settings",
-  //   children: [
-  //     {
-  //       id: "profile",
-  //       label: "Manage your profile and preferences",
-  //       icon: <Settings size={16} />,
-  //       href: "/dashboard/settings/profile",
-  //     },
-  //   ],
-  // },
+];
+
+// Define mobile tab priorities (items that should appear in bottom navigation)
+const mobilePriorityItems = [
+  "dashboard",
+  "orders", 
+  "store",
+  "personnel"
 ];
 
 interface CustomersLayoutProps {
@@ -250,6 +118,128 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
   children,
   currentPath = "/",
 }) => {
+  const { user } = useUser();
+  const pathname = usePathname();
+
+  // Function to check if user has access to a specific item
+  const hasAccess = (requiredRoles: string[]) => {
+    if (!user?.roles || user.roles.length === 0) return false;
+    
+    // If "*" is in required roles, it's available to everyone
+    if (requiredRoles.includes("*")) return true;
+    
+    // Check if user has any of the required roles
+    return requiredRoles.some(role => user.roles.includes(role));
+  };
+
+  // Filter navigation items based on user roles
+  const getFilteredNavigationItems = () => {
+    return allNavigationItems
+      .filter(item => hasAccess(item.requiredRoles))
+      .map(item => ({
+        ...item,
+        children: item.children?.filter(child => 
+          hasAccess(child.requiredRoles || item.requiredRoles)
+        )
+      }));
+  };
+
+  // Check if current path is accessible
+  const isCurrentPathAccessible = () => {
+    if (pathname === "/" || pathname === "/dashboard") {
+      return hasAccess(["dashboard", "admin"]);
+    }
+
+    // Find the navigation item that matches the current path
+    const findItemByPath = (items: typeof allNavigationItems): any => {
+      for (const item of items) {
+        if (pathname.startsWith(item.href)) {
+          return item;
+        }
+        if (item.children) {
+          for (const child of item.children) {
+            if (pathname.startsWith(child.href)) {
+              return child;
+            }
+          }
+        }
+      }
+      return null;
+    };
+
+    const currentItem = findItemByPath(allNavigationItems);
+    if (!currentItem) return true; // If no matching item found, allow access
+
+    return hasAccess(currentItem.requiredRoles);
+  };
+
+  // Get filtered navigation items
+  const navigationItems = getFilteredNavigationItems();
+
+  // Create mobile navigation items
+  const createMobileNavigationItems = () => {
+    // Get priority items that user has access to
+    const priorityItems = navigationItems.filter(item => 
+      mobilePriorityItems.includes(item.id)
+    ).slice(0, 4); // Take first 4 items
+
+    // Remaining items go to "More" menu
+    const moreItems = navigationItems.filter(item => 
+      !mobilePriorityItems.includes(item.id)
+    );
+
+    const mainTabItems = [
+      ...priorityItems,
+      ...(moreItems.length > 0 ? [{
+        id: 'more',
+        label: 'More',
+        icon: <MoreHorizontal size={20} />,
+        href: '/dashboard/more'
+      }] : [])
+    ];
+
+    return { mainTabItems, moreMenuItems: moreItems };
+  };
+
+  const { mainTabItems, moreMenuItems } = createMobileNavigationItems();
+
+  // Show loader if user doesn't have access to current path and it's not root
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (pathname !== "/" && !isCurrentPathAccessible()) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center p-8">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mx-auto mb-6"></div>
+          <div className="max-w-md mx-auto">
+            <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Access Restricted
+            </h3>
+            <p className="text-gray-600 mb-4">
+              You don&apos;t have permission to access this section. Please contact your administrator if you believe this is an error.
+            </p>
+            <button
+              onClick={() => window.history.back()}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Desktop Sidebar */}
@@ -265,7 +255,8 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Main Content Header */}
-        <MobileHeader companyName="test org" userName="Anuj Choudhary" />
+        <MobileHeader companyName={user?.orgName || "Company"} userName={user?.name || "User"} />
+        
         {/* Main Content */}
         <main className="flex-1 md:overflow-auto pb-20 md:pb-0">
           <div className="h-full">

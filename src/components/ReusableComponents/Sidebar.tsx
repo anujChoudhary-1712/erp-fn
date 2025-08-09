@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import { ChevronDown, ChevronRight, LogOut } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ChevronDown, ChevronRight, LogOut, Bell } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
+import NotificationApis from "@/actions/Apis/NotificationApis";
 
 interface NavItem {
   id: string;
@@ -27,8 +28,48 @@ const Sidebar: React.FC<SidebarProps> = ({
   userType,
 }) => {
   const [expandedItems, setExpandedItems] = useState<string[]>(["production"]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [isPolling, setIsPolling] = useState<boolean>(true);
   const { user, logout } = useUser();
   const router = useRouter();
+
+  // Fetch unread notifications count
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await NotificationApis.getAllNotifications(`isRead=false`);
+      if (res.status === 200) {
+        setUnreadCount(res.data?.length || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching unread notifications:', error);
+    }
+  };
+
+  // Setup polling for notifications
+  useEffect(() => {
+    // Initial fetch
+    fetchUnreadCount();
+
+    // Setup polling interval
+    const pollInterval = setInterval(() => {
+      if (isPolling) {
+        fetchUnreadCount();
+      }
+    }, 5000); // Poll every 5 seconds
+
+    // Cleanup on unmount
+    return () => clearInterval(pollInterval);
+  }, [isPolling]);
+
+  // Pause polling when tab is not visible (optional optimization)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPolling(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems((prev) =>
@@ -44,6 +85,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     } else {
       router.push(item.href);
     }
+  };
+
+  const handleNotificationClick = () => {
+    router.push("/dashboard/notifications");
   };
 
   const handleLogout = () => {
@@ -111,9 +156,35 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className={`bg-white border-r border-gray-200 h-full ${className}`}>
       <div className="flex flex-col h-full">
-        {/* Header */}
+        {/* Header with Notification Bell */}
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-800">test org</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-800">{user ? user.orgName : "Default Org Name"}</h2>
+            
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                onClick={handleNotificationClick}
+                className={`
+                  p-2 rounded-lg transition-colors duration-200 relative
+                  ${currentPath === '/dashboard/notifications' 
+                    ? 'bg-blue-100 text-blue-600' 
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }
+                `}
+                aria-label="View notifications"
+              >
+                <Bell size={20} />
+                
+                {/* Unread Count Badge */}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Navigation */}
@@ -136,6 +207,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <p className="text-sm font-medium text-gray-900">
                   {user?.name || "User"}
                 </p>
+                {/* Optional: Show connection status */}
+                <div className="flex items-center space-x-1">
+                  <div className={`w-2 h-2 rounded-full ${isPolling ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                  <p className="text-xs text-gray-500">
+                    {isPolling ? 'Connected' : 'Offline'}
+                  </p>
+                </div>
               </div>
             </div>
             <button
