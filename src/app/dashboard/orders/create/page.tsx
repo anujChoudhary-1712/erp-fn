@@ -1,3 +1,5 @@
+// src/app/dashboard/orders/create/page.tsx
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useState } from "react";
@@ -11,6 +13,7 @@ interface Customer {
   name: string;
   phone: string;
   address: string;
+  gst_no: string; // New field
 }
 
 interface OrderItem {
@@ -27,6 +30,10 @@ interface OrderFormData {
   customer: Customer;
   order_items: OrderItem[];
   total_amount: number;
+  notes: string; // New field, call this instruction
+  company_po_number: string; // New field
+  mode_of_receiving: string; // New field
+  contact_name: string; // New field
 }
 
 const CreateOrderPage: React.FC = () => {
@@ -50,6 +57,7 @@ const CreateOrderPage: React.FC = () => {
           name: data.customer.name.trim(),
           phone: data.customer.phone.trim(),
           address: data.customer.address.trim(),
+          gst_no: data.customer.gst_no.trim(), // Send gst_no
         },
         order_items: data.order_items.map((item) => ({
           name: item.name.trim(),
@@ -59,7 +67,11 @@ const CreateOrderPage: React.FC = () => {
           productId:item.productId
         })),
         total_amount: Number(data.total_amount),
-        org_id: user?.organizationId || "", // Ensure org_id is set
+        org_id: user?.organizationId || "",
+        notes: data.notes, // Send new fields
+        company_po_number: data.company_po_number,
+        mode_of_receiving: data.mode_of_receiving,
+        contact_name: data.contact_name,
       };
 
       const response = await OrderApis.createOrder(orderData);

@@ -1,3 +1,5 @@
+// src/app/dashboard/orders/[id]/page.tsx
+
 "use client";
 import GoodsApis from "@/actions/Apis/GoodsApis";
 import OrderApis from "@/actions/Apis/OrdersApis";
@@ -12,6 +14,7 @@ interface Customer {
   name: string;
   phone: string;
   address: string;
+  gst_no: string; // New field
 }
 
 interface OrderItem {
@@ -47,6 +50,10 @@ interface Order {
     price_approved: boolean;
   };
   reason?: string;
+  notes: string; // New field (instruction)
+  company_po_number: string; // New field
+  mode_of_receiving: string; // New field
+  contact_name: string; // New field
   __v: number;
 }
 
@@ -432,6 +439,12 @@ const OrderDetailsPage: React.FC = () => {
                 </label>
                 <p className="text-gray-900 break-all">{order.customer?.phone}</p>
               </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">
+                  GST No.:
+                </label>
+                <p className="text-gray-900 break-all">{order.customer?.gst_no || 'N/A'}</p>
+              </div>
               <div className="sm:col-span-2 lg:col-span-1 xl:col-span-2">
                 <label className="text-sm font-medium text-gray-600">
                   Address:
@@ -444,10 +457,10 @@ const OrderDetailsPage: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Order Summary */}
+          {/* Order Details */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Order Summary
+              Order Details
             </h2>
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:justify-between space-y-1 sm:space-y-0">
@@ -474,9 +487,39 @@ const OrderDetailsPage: React.FC = () => {
                   {order.order_items?.length || 0}
                 </span>
               </div>
+              {order.company_po_number && (
+                <div className="flex flex-col sm:flex-row sm:justify-between space-y-1 sm:space-y-0">
+                  <span className="text-gray-600 text-sm sm:text-base">Company PO Number:</span>
+                  <span className="text-gray-900 text-sm sm:text-base">
+                    {order.company_po_number}
+                  </span>
+                </div>
+              )}
+              {order.mode_of_receiving && (
+                <div className="flex flex-col sm:flex-row sm:justify-between space-y-1 sm:space-y-0">
+                  <span className="text-gray-600 text-sm sm:text-base">Mode of Receiving:</span>
+                  <span className="text-gray-900 text-sm sm:text-base">
+                    {order.mode_of_receiving}
+                  </span>
+                </div>
+              )}
+              {order.contact_name && (
+                <div className="flex flex-col sm:flex-row sm:justify-between space-y-1 sm:space-y-0">
+                  <span className="text-gray-600 text-sm sm:text-base">Contact Name:</span>
+                  <span className="text-gray-900 text-sm sm:text-base">
+                    {order.contact_name}
+                  </span>
+                </div>
+              )}
             </div>
+            {order.notes && (
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <span className="text-sm font-medium text-gray-700">Instructions:</span>
+                <p className="text-sm text-gray-600 mt-1">{order.notes}</p>
+              </div>
+            )}
           </div>
-
+          
           {/* Review Details - Show when order has been reviewed */}
           {(order.status === "approved" || order.status === "rejected") && order.review_checklist && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
@@ -516,7 +559,7 @@ const OrderDetailsPage: React.FC = () => {
                 )}
               </div>
             </div>
-                      )}
+          )}
 
           {/* Production Actions - Show when status is approve */}
           {order.status === "approved" && (
