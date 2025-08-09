@@ -13,6 +13,7 @@ import {
   ToggleRight,
   Edit,
   Trash2,
+  Building2,
 } from "lucide-react";
 import { formatDate } from "@/utils/date";
 import AddTeamMemberModal from "@/components/modal/AddTeamMemberModal";
@@ -24,6 +25,9 @@ interface UserData {
   email: string;
   organizationId: string;
   roles: string[];
+  department?: string;
+  position?: string;
+  joiningDate?: string;
   status: "active" | "inactive";
   createdAt: string;
   __v: number;
@@ -33,6 +37,9 @@ interface AddUserPayload {
   name: string;
   email: string;
   roles: string[];
+  department: string;
+  position: string;
+  joiningDate: string;
   password: string;
 }
 
@@ -288,6 +295,9 @@ const TeamPage = () => {
       const updateData: any = {
         name: userData.name,
         roles: userData.roles,
+        department: userData.department,
+        position: userData.position,
+        joiningDate: userData.joiningDate,
       };
 
       if (userData.password.trim()) {
@@ -330,6 +340,32 @@ const TeamPage = () => {
 
   const handleEditClick = (user: UserData) => {
     setEditingUser(user);
+  };
+
+  const formatRoles = (roles: string[]) => {
+    const roleLabels: { [key: string]: string } = {
+      store_mgt: "Store Management",
+      vendors_mgt: "Vendors Management", 
+      document_mgt: "Document Management",
+      order_mgt: "Order Management",
+      machinery_mgt: "Machinery Management",
+      report: "Report & Complaint",
+      production: "Production",
+      quality_check: "Quality Check",
+      dashboard: "Dashboard",
+      admin: "Admin",
+      // Legacy role mappings for backward compatibility
+      purchase_order_member: "Purchase Order Member",
+      production_member: "Production Member",
+      dispatch_member: "Dispatch Member",
+      accounts_member: "Accounts Member",
+      quality_control_member: "Quality Control Member",
+      inventory_member: "Inventory Member",
+    };
+
+    return roles
+      .map(role => roleLabels[role] || role.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()))
+      .join(", ");
   };
 
   if (loading) {
@@ -413,14 +449,21 @@ const TeamPage = () => {
               <div className="p-5">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-white text-sm font-medium">
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-white text-lg font-medium">
                         {user.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <h2 className="text-xl font-semibold text-gray-800 truncate">
-                      {user.name}
-                    </h2>
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-800 truncate">
+                        {user.name}
+                      </h2>
+                      {user.position && (
+                        <p className="text-sm text-gray-600 truncate">
+                          {user.position}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
@@ -466,7 +509,7 @@ const TeamPage = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2 mb-4">
+                <div className="space-y-3 mb-4">
                   <div className="flex items-center text-sm text-gray-600">
                     <Mail
                       size={16}
@@ -475,13 +518,23 @@ const TeamPage = () => {
                     <span className="truncate">{user.email}</span>
                   </div>
 
+                  {user.department && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Building2
+                        size={16}
+                        className="mr-2 flex-shrink-0 text-gray-400"
+                      />
+                      <span className="truncate">{user.department}</span>
+                    </div>
+                  )}
+
                   <div className="flex items-center text-sm text-gray-600">
                     <Shield
                       size={16}
                       className="mr-2 flex-shrink-0 text-gray-400"
                     />
-                    <span className="truncate capitalize">
-                      {user.roles.join(", ").replace(/_/g, " ")}
+                    <span className="truncate">
+                      {formatRoles(user.roles)}
                     </span>
                   </div>
 
@@ -490,7 +543,9 @@ const TeamPage = () => {
                       size={16}
                       className="mr-2 flex-shrink-0 text-gray-400"
                     />
-                    <span>Joined {formatDate(user.createdAt)}</span>
+                    <span>
+                      Joined {user.joiningDate ? formatDate(user.joiningDate) : formatDate(user.createdAt)}
+                    </span>
                   </div>
                 </div>
 
@@ -504,6 +559,12 @@ const TeamPage = () => {
                   >
                     {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                   </span>
+                  
+                  {user.roles.length > 1 && (
+                    <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                      {user.roles.length} roles
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -522,6 +583,9 @@ const TeamPage = () => {
           name: editingUser.name,
           email: editingUser.email,
           roles: editingUser.roles,
+          department: editingUser.department || "",
+          position: editingUser.position || "",
+          joiningDate: editingUser.joiningDate || "",
         } : undefined}
       />
 
