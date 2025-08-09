@@ -28,8 +28,6 @@ const getHeader = (formData: boolean, token: string | null) => {
   return headers;
 };
 
-// Track if a token refresh is in progress
-let isRefreshing = false;
 // Store pending requests that should be retried after token refresh
 let pendingRequests: Array<{
   config: AxiosRequestConfig;
@@ -81,52 +79,52 @@ const refreshAuthToken = async (): Promise<string> => {
 };
 
 // Add an interceptor for response errors
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as any;
+// axiosInstance.interceptors.response.use(
+//   (response) => response,
+//   async (error: AxiosError) => {
+//     const originalRequest = error.config as any;
 
-    // If error is 401 and we haven't tried refreshing yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (!isRefreshing) {
-        // Set flag to true to avoid multiple refresh calls
-        isRefreshing = true;
-        originalRequest._retry = true;
+//     // If error is 401 and we haven't tried refreshing yet
+//     if (error.response?.status === 401 && !originalRequest._retry) {
+//       if (!isRefreshing) {
+//         // Set flag to true to avoid multiple refresh calls
+//         isRefreshing = true;
+//         originalRequest._retry = true;
 
-        try {
-          // Refresh the token
-          const newToken = await refreshAuthToken();
-          isRefreshing = false;
+//         try {
+//           // Refresh the token
+//           const newToken = await refreshAuthToken();
+//           isRefreshing = false;
           
-          // Update the token in the original request
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          }
+//           // Update the token in the original request
+//           if (originalRequest.headers) {
+//             originalRequest.headers.Authorization = `Bearer ${newToken}`;
+//           }
           
-          // Process any pending requests
-          processPendingRequests(newToken);
+//           // Process any pending requests
+//           processPendingRequests(newToken);
           
-          // Retry the original request
-          return axiosInstance(originalRequest);
-        } catch (refreshError) {
-          isRefreshing = false;
-          return Promise.reject(refreshError);
-        }
-      } else {
-        // If refresh is already in progress, add request to pending queue
-        return new Promise((resolve, reject) => {
-          pendingRequests.push({
-            config: originalRequest,
-            resolve,
-            reject,
-          });
-        });
-      }
-    }
+//           // Retry the original request
+//           return axiosInstance(originalRequest);
+//         } catch (refreshError) {
+//           isRefreshing = false;
+//           return Promise.reject(refreshError);
+//         }
+//       } else {
+//         // If refresh is already in progress, add request to pending queue
+//         return new Promise((resolve, reject) => {
+//           pendingRequests.push({
+//             config: originalRequest,
+//             resolve,
+//             reject,
+//           });
+//         });
+//       }
+//     }
 
-    return Promise.reject(error);
-  }
-);
+//     return Promise.reject(error);
+//   }
+// );
 
 // Modified API call functions to use the axios instance
 export const getResponse = (url: string, params: any, token: string | null) => {
