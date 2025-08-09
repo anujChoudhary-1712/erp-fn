@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import VendorApis from '@/actions/Apis/VendorApis';
 import Button from '@/components/ReusableComponents/Button';
@@ -33,33 +32,86 @@ interface Vendor {
   pan_no: string;
   is_msme: boolean;
   msme_reg_no?: string;
+  status: 'pending' | 'approved' | 'rejected'; // Added status field
+}
+
+interface Tab {
+  id: string;
+  label: string;
+  count: number;
 }
 
 const VendorsPage = () => {
+  const [activeTab, setActiveTab] = useState<string>("all");
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [allVendors, setAllVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const router = useRouter();
 
-  // Fetch vendors on component mount
+  // Fetch all vendors once to get the full list and set initial display
   useEffect(() => {
-    fetchVendors();
+    const fetchAllVendors = async () => {
+      setLoading(true);
+      try {
+        const res = await VendorApis.getAllVendors();
+        if (res.status === 200) {
+          const fetchedVendors = res.data || [];
+          setAllVendors(fetchedVendors);
+          // Set initial vendors based on the active tab, which is 'all' by default
+          setVendors(fetchedVendors);
+        } else {
+          setError("Failed to load vendors");
+        }
+      } catch (error: any) {
+        console.error("Error fetching vendors:", error);
+        setError(error.message || "Failed to load vendors");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAllVendors();
   }, []);
 
-  const fetchVendors = async () => {
-    setLoading(true);
-    try {
-      const res = await VendorApis.getAllVendors();
-      if (res.status === 200) {
-        setVendors(res.data || []);
-      }
-    } catch (error: any) {
-      console.error("Error fetching vendors:", error);
-      setError(error.message || "Failed to load vendors");
-    } finally {
-      setLoading(false);
+  // Filter vendors whenever the active tab changes
+  useEffect(() => {
+    if (activeTab === 'all') {
+      setVendors(allVendors);
+    } else {
+      setVendors(allVendors.filter(v => v.status === activeTab));
+    }
+  }, [activeTab, allVendors]);
+  
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-100 text-green-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'pending':
+      default:
+        return 'bg-yellow-100 text-yellow-800';
     }
   };
+
+  const getTabCounts = (vendorList: Vendor[]) => {
+    const counts = {
+      all: vendorList.length,
+      pending: vendorList.filter(v => v.status === "pending").length,
+      approved: vendorList.filter(v => v.status === "approved").length,
+      rejected: vendorList.filter(v => v.status === "rejected").length,
+    };
+    return counts;
+  };
+  
+  const tabCounts = getTabCounts(allVendors);
+
+  const tabs: Tab[] = [
+    { id: "all", label: "All Vendors", count: tabCounts.all },
+    { id: "pending", label: "Pending", count: tabCounts.pending },
+    { id: "approved", label: "Approved", count: tabCounts.approved },
+    { id: "rejected", label: "Rejected", count: tabCounts.rejected },
+  ];
 
   const navigateToVendorDetails = (vendorId: string) => {
     router.push(`/dashboard/vendors/${vendorId}`);
@@ -92,12 +144,14 @@ const VendorsPage = () => {
             </svg>
           </div>
         </div>
-        <p className="text-sm text-gray-600 mb-1">{vendor.company_type}</p>
-        {vendor.approved_for && (
-          <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">
-            {vendor.approved_for}
-          </p>
-        )}
+        <div className="flex items-center space-x-2">
+          <p className="text-sm text-gray-600">{vendor.company_type}</p>
+          <span 
+            className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(vendor.status)}`}
+          >
+            {vendor.status?.charAt(0).toUpperCase() + vendor.status?.slice(1)}
+          </span>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -230,6 +284,34 @@ const VendorsPage = () => {
         </Button>
       </div>
 
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex space-x-8 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                activeTab === tab.id
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              {tab.label}
+              <span
+                className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                  activeTab === tab.id
+                    ? "bg-blue-100 text-blue-600"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
       {/* Content */}
       <div className="min-h-96">
         {loading ? (
@@ -254,7 +336,7 @@ const VendorsPage = () => {
             <p className="text-gray-600 mb-4">{error}</p>
             <Button
               variant="outline"
-              onClick={fetchVendors}
+              onClick={() => {}}
             >
               Try Again
             </Button>
@@ -275,16 +357,20 @@ const VendorsPage = () => {
               No vendors found
             </h3>
             <p className="text-gray-600 mb-4">
-              You haven&apos;t added any vendors yet. Start by adding your first vendor.
+              {activeTab === "all"
+                ? "You haven't added any vendors yet. Start by adding your first vendor."
+                : `No ${activeTab} vendors found.`}
             </p>
-            <Button
-              variant="primary"
-              onClick={() => {
-                router.push("/dashboard/vendors/create");
-              }}
-            >
-              Add Your First Vendor
-            </Button>
+            {activeTab === "all" && (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  router.push("/dashboard/vendors/create");
+                }}
+              >
+                Add Your First Vendor
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -292,8 +378,6 @@ const VendorsPage = () => {
               <p className="text-sm text-gray-600 mb-4 sm:mb-0">
                 Showing {vendors.length} vendor{vendors.length !== 1 ? 's' : ''}
               </p>
-              
-              {/* Optional: Add search/filter functionality here in the future */}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

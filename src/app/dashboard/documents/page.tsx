@@ -3,25 +3,23 @@ import { getCookie } from "@/actions/CookieUtils";
 import DocumentApis from "@/actions/Apis/DocumentApis";
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Eye,
-  Trash2,
   Upload,
   X,
-  File,
   Plus,
   ChevronDown,
-  MoreVertical,
+  File,
 } from "lucide-react";
 import CategoryApis from "@/actions/Apis/CategoryApis";
+import DocumentCard from "@/components/DocumentCard";
 
-interface Document {
-  _id: string; // This is the sub-document ID
-  outerId: string; // Add this to store the parent document's ID
+export interface Document {
+  _id: string;
+  outerId: string;
   docName: string;
   fileName: string;
   fileSize: number;
   link: string;
-  status: string; // e.g., "uploaded", "approved", "rejected"
+  status: string;
   description: string;
   org_id: string;
   createdAt: string;
@@ -32,7 +30,7 @@ interface Document {
 }
 
 interface FetchedDocumentObject {
-  _id: string; // This is the outer main ID
+  _id: string;
   documents: Document[];
   org_id: string;
   latest_doc_id: string;
@@ -56,11 +54,11 @@ type ActiveTab = "active" | "obsolete";
 const DocumentsPage: React.FC = () => {
   const [activeDocuments, setActiveDocuments] = useState<Document[]>([]);
   const [obsoleteDocuments, setObsoleteDocuments] = useState<Document[]>([]);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("active"); // New state for tabs
+  const [activeTab, setActiveTab] = useState<ActiveTab>("active");
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
-  const [editingDocument, setEditingDocument] = useState<Document | null>(null); // For amend mode
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [documentName, setDocumentName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -68,22 +66,16 @@ const DocumentsPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [documentCategories, setDocumentCategories] = useState<string[]>([]);
-  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] =
-    useState<boolean>(false);
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState<boolean>(false);
   const [newCategoryName, setNewCategoryName] = useState<string>("");
-  const [documentCategoryObject, setDocumentCategoryObject] =
-    useState<Category | null>(null);
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null); // To manage dropdown state
+  const [documentCategoryObject, setDocumentCategoryObject] = useState<Category | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
-  // Ref for dropdown to close when clicking outside
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setOpenDropdownId(null);
       }
     };
@@ -109,16 +101,13 @@ const DocumentsPage: React.FC = () => {
 
     try {
       const token = getCookie("token");
-      const response = await fetch(
-        "http://localhost:8001/api/documents/upload",
-        {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch("http://localhost:8001/api/documents/upload", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to upload document");
@@ -134,11 +123,11 @@ const DocumentsPage: React.FC = () => {
   };
 
   const amendDocument = async (
-    file: File | null, // File can be null if not changed
+    file: File | null,
     name: string,
     desc: string,
     category: string | null,
-    outerId: string // Use the outer main ID
+    outerId: string
   ) => {
     const formData = new FormData();
     if (file) {
@@ -152,16 +141,13 @@ const DocumentsPage: React.FC = () => {
 
     try {
       const token = getCookie("token");
-      const response = await fetch(
-        `http://localhost:8001/api/documents/${outerId}`, // Use outerId here
-        {
-          method: "PUT",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`http://localhost:8001/api/documents/${outerId}`, {
+        method: "PUT",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to amend document");
@@ -175,14 +161,8 @@ const DocumentsPage: React.FC = () => {
     }
   };
 
-  const updateDocumentStatus = async (
-    outerId: string, // Main document ID
-    docId: string, // Sub-document ID
-    status: string
-  ) => {
+  const updateDocumentStatus = async (outerId: string, docId: string, status: string) => {
     try {
-      // Assuming DocumentApis.updateStatus exists and accepts outerId, docId, status
-      // You might need to adjust your DocumentApis if it doesn't support both IDs
       const res = await DocumentApis.updateStatus(outerId, docId, status);
       if (res.status === 200) {
         console.log("Document status updated successfully:", res.data);
@@ -204,29 +184,26 @@ const DocumentsPage: React.FC = () => {
         const fetchedObsoleteDocuments: Document[] = [];
 
         res.data.forEach((obj: FetchedDocumentObject) => {
-          const latestDoc = obj.documents.find(
-            (doc) => doc._id === obj.latest_doc_id
-          );
+          const latestDoc = obj.documents.find((doc) => doc._id === obj.latest_doc_id);
 
           if (latestDoc) {
             fetchedActiveDocuments.push({
               ...latestDoc,
-              outerId: obj._id, // Attach the outer main ID here
+              outerId: obj._id,
               description: latestDoc.description || "No description provided.",
               docType: latestDoc.docType || "Uncategorized",
-              status: latestDoc.status || "uploaded", // Ensure status exists
+              status: latestDoc.status || "uploaded",
             });
           }
 
-          // Collect all other documents as obsolete
           obj.documents.forEach((doc) => {
             if (doc._id !== obj.latest_doc_id) {
               fetchedObsoleteDocuments.push({
                 ...doc,
-                outerId: obj._id, // Still needs the outerId for potential actions
+                outerId: obj._id,
                 description: doc.description || "No description provided (Obsolete).",
                 docType: doc.docType || "Uncategorized",
-                status: doc.status || "obsolete", // Can explicitly set status for obsolete versions if needed
+                status: doc.status || "obsolete",
               });
             }
           });
@@ -249,9 +226,7 @@ const DocumentsPage: React.FC = () => {
     try {
       const res = await CategoryApis.getAllCategories();
       if (res.status === 200) {
-        const docCategory = res.data.find(
-          (cat: Category) => cat.type === "Document-Category"
-        );
+        const docCategory = res.data.find((cat: Category) => cat.type === "Document-Category");
         if (docCategory) {
           setDocumentCategories(docCategory.items);
           setDocumentCategoryObject(docCategory);
@@ -275,14 +250,10 @@ const DocumentsPage: React.FC = () => {
 
     try {
       if (documentCategoryObject) {
-        const updatedItems = [
-          ...documentCategoryObject.items,
-          newCategoryName.trim(),
-        ];
-        const res = await CategoryApis.updateCategories(
-          documentCategoryObject._id,
-          { items: updatedItems }
-        );
+        const updatedItems = [...documentCategoryObject.items, newCategoryName.trim()];
+        const res = await CategoryApis.updateCategories(documentCategoryObject._id, {
+          items: updatedItems,
+        });
         if (res.status === 200) {
           alert(`Category "${newCategoryName}" added successfully!`);
           await fetchDocumentCategories();
@@ -312,70 +283,14 @@ const DocumentsPage: React.FC = () => {
     fetchDocumentCategories();
   }, []);
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
-
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getFileIcon = (fileName: string): JSX.Element => {
-    const extension = fileName.split(".").pop()?.toLowerCase();
-    const iconClass = "w-8 h-8 text-blue-500";
-
-    switch (extension) {
-      case "pdf":
-        return <File className={`${iconClass} text-red-500`} />;
-      case "doc":
-      case "docx":
-        return <File className={`${iconClass} text-blue-600`} />;
-      case "jpg":
-      case "jpeg":
-      case "png":
-      case "gif":
-        return <File className={`${iconClass} text-green-500`} />;
-      default:
-        return <File className={iconClass} />;
-    }
-  };
-
-  const getDisplayStatus = (status: string): string => {
-    switch (status.toLowerCase()) {
-      case "uploaded":
-        return "Review Pending";
-      case "approved":
-        return "Approved";
-      case "rejected":
-        return "Rejected";
-      case "obsolete": // Added for explicit obsolete status display
-          return "Obsolete";
-      default:
-        return status;
-    }
-  };
-
   const openDocumentModal = (mode: ModalMode, doc?: Document) => {
     setModalMode(mode);
     setIsModalOpen(true);
-    // When amending, we only set the editingDocument for the outerId,
-    // but we don't pre-fill any form fields.
     if (mode === "amend" && doc) {
-      setEditingDocument(doc); // Keep the outerId for the API call
+      setEditingDocument(doc);
     } else {
       setEditingDocument(null);
     }
-    // Always clear fields for a fresh start for both upload and amend
     setDocumentName("");
     setDescription("");
     setSelectedCategory(null);
@@ -403,33 +318,18 @@ const DocumentsPage: React.FC = () => {
       return;
     }
 
-    // For amend mode, a file is optional. If no file is selected, `uploadFile` will be null.
-    // However, if no file is selected AND no document to amend is set (which shouldn't happen
-    // if `editingDocument` is correctly set on `handleAmend`), this means an invalid state.
     if (modalMode === "amend" && !uploadFile && !editingDocument) {
-        alert("No document selected for amendment, and no new file provided.");
-        return;
+      alert("No document selected for amendment, and no new file provided.");
+      return;
     }
-
 
     setIsUploading(true);
     if (modalMode === "upload") {
-      uploadDocument(
-        uploadFile!, // Assert non-null as we checked it
-        documentName,
-        description,
-        selectedCategory
-      )
+      uploadDocument(uploadFile!, documentName, description, selectedCategory)
         .then(() => closeDocumentModal())
         .finally(() => setIsUploading(false));
     } else if (modalMode === "amend" && editingDocument) {
-      amendDocument(
-        uploadFile, // Can be null if file is not updated
-        documentName,
-        description,
-        selectedCategory,
-        editingDocument.outerId // Use outerId for amending
-      )
+      amendDocument(uploadFile, documentName, description, selectedCategory, editingDocument.outerId)
         .then(() => closeDocumentModal())
         .finally(() => setIsUploading(false));
     }
@@ -449,7 +349,7 @@ const DocumentsPage: React.FC = () => {
     }
 
     try {
-      const res = await DocumentApis.deleteDocument(doc.outerId); // Assuming delete uses the outer ID
+      const res = await DocumentApis.deleteDocument(doc.outerId);
       if (res.status === 200) {
         window.alert("Document deleted successfully.");
         await fetchDocuments();
@@ -461,18 +361,22 @@ const DocumentsPage: React.FC = () => {
   };
 
   const handleAmend = (doc: Document) => {
-    setOpenDropdownId(null); // Close dropdown
-    openDocumentModal("amend", doc); // Pass the document to retain outerId
+    setOpenDropdownId(null);
+    openDocumentModal("amend", doc);
   };
 
   const handleApprove = (doc: Document) => {
-    setOpenDropdownId(null); // Close dropdown
+    setOpenDropdownId(null);
     updateDocumentStatus(doc.outerId, doc._id, "approved");
   };
 
   const handleReject = (doc: Document) => {
-    setOpenDropdownId(null); // Close dropdown
+    setOpenDropdownId(null);
     updateDocumentStatus(doc.outerId, doc._id, "rejected");
+  };
+
+  const handleToggleDropdown = (docId: string) => {
+    setOpenDropdownId(openDropdownId === docId ? null : docId);
   };
 
   const documentsToDisplay = activeTab === "active" ? activeDocuments : obsoleteDocuments;
@@ -481,9 +385,7 @@ const DocumentsPage: React.FC = () => {
     <div className="p-4 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Document Management
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">Document Management</h1>
         <button
           onClick={() => openDocumentModal("upload")}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -526,119 +428,19 @@ const DocumentsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {documentsToDisplay.length > 0 ? (
             documentsToDisplay.map((doc) => (
-              <div
+              <DocumentCard
                 key={doc._id}
-                className="bg-white rounded-lg shadow-md border border-gray-200 p-4 hover:shadow-lg transition-shadow relative"
-              >
-                {/* Three dots dropdown */}
-                <div className="absolute top-2 right-2">
-                  <button
-                    onClick={() =>
-                      setOpenDropdownId(openDropdownId === doc._id ? null : doc._id)
-                    }
-                    className="p-1 rounded-full text-gray-500 hover:bg-gray-100"
-                  >
-                    <MoreVertical className="w-5 h-5" />
-                  </button>
-                  {openDropdownId === doc._id && (
-                    <div
-                      ref={dropdownRef} // Attach ref here
-                      className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
-                    >
-                      <button
-                        onClick={() => handleView(doc)}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                      >
-                        View
-                      </button>
-                      <button
-                        onClick={() => handleDelete(doc)}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                      >
-                        Delete
-                      </button>
-                      {activeTab === "active" && ( // Only show these for active documents
-                        <>
-                          <button
-                            onClick={() => handleAmend(doc)}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                          >
-                            Amend
-                          </button>
-                          <button
-                            onClick={() => handleApprove(doc)}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleReject(doc)}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* File Icon and Name */}
-                <div className="flex items-start gap-3 mb-3 pr-8">
-                  {" "}
-                  {/* Add padding right to avoid overlap with dropdown */}
-                  {getFileIcon(doc.fileName)}
-                  <div className="flex-1 min-w-0">
-                    <h3
-                      className="font-medium text-gray-900 truncate"
-                      title={doc.docName}
-                    >
-                      {doc.docName}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {formatFileSize(doc.fileSize)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Category (if exists) */}
-                {doc.docType && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    <span className="font-medium">Category:</span> {doc.docType}
-                  </p>
-                )}
-
-                {/* Description */}
-                <p
-                  className="text-sm text-gray-600 mb-3 line-clamp-2"
-                  title={doc.description}
-                >
-                  {doc.description}
-                </p>
-
-                {/* Status Display */}
-                <p className="text-sm mb-2 font-medium">
-                  Status:{" "}
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      getDisplayStatus(doc.status) === "Approved"
-                        ? "bg-green-100 text-green-800"
-                        : getDisplayStatus(doc.status) === "Rejected"
-                        ? "bg-red-100 text-red-800"
-                        : getDisplayStatus(doc.status) === "Obsolete"
-                        ? "bg-gray-100 text-gray-600"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {getDisplayStatus(doc.status)}
-                  </span>
-                </p>
-
-                {/* Upload Date */}
-                <p className="text-xs text-gray-400">
-                  Uploaded: {formatDate(doc.uploadDate)}
-                </p>
-              </div>
+                document={doc}
+                showActions={true}
+                onView={handleView}
+                onDelete={handleDelete}
+                onAmend={activeTab === "active" ? handleAmend : undefined}
+                onApprove={activeTab === "active" ? handleApprove : undefined}
+                onReject={activeTab === "active" ? handleReject : undefined}
+                dropdownOpen={openDropdownId === doc._id}
+                onToggleDropdown={() => handleToggleDropdown(doc._id)}
+                dropdownRef={dropdownRef}
+              />
             ))
           ) : (
             <div className="col-span-full text-center py-12">
@@ -647,18 +449,16 @@ const DocumentsPage: React.FC = () => {
                 No {activeTab === "active" ? "active" : "obsolete"} documents found
               </h3>
               {activeTab === "active" && (
-                <p className="text-gray-500 mb-4">
-                  Get started by uploading your first document
-                </p>
-              )}
-               {activeTab === "active" && (
-                <button
-                  onClick={() => openDocumentModal("upload")}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  Upload Document
-                </button>
+                <>
+                  <p className="text-gray-500 mb-4">Get started by uploading your first document</p>
+                  <button
+                    onClick={() => openDocumentModal("upload")}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload Document
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -673,10 +473,7 @@ const DocumentsPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900">
                 {modalMode === "upload" ? "Upload Document" : "Amend Document"}
               </h2>
-              <button
-                onClick={closeDocumentModal}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <button onClick={closeDocumentModal} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -696,15 +493,10 @@ const DocumentsPage: React.FC = () => {
                     className="hidden"
                     id="file-upload"
                   />
-                  <label
-                    htmlFor="file-upload"
-                    className="cursor-pointer flex flex-col items-center"
-                  >
+                  <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
                     <Upload className="w-8 h-8 text-gray-400 mb-2" />
                     <span className="text-sm text-gray-600">
-                      {uploadFile
-                        ? uploadFile.name
-                        : "Click to upload file"}
+                      {uploadFile ? uploadFile.name : "Click to upload file"}
                     </span>
                   </label>
                 </div>
@@ -712,9 +504,7 @@ const DocumentsPage: React.FC = () => {
 
               {/* Document Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Document Name
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Document Name</label>
                 <input
                   type="text"
                   value={documentName}
@@ -726,9 +516,7 @@ const DocumentsPage: React.FC = () => {
 
               {/* Document Category Dropdown */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Document Category
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Document Category</label>
                 <div className="relative">
                   <select
                     value={selectedCategory || ""}
@@ -762,14 +550,10 @@ const DocumentsPage: React.FC = () => {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                 <textarea
                   value={description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setDescription(e.target.value)
-                  }
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   placeholder="Enter document description..."
@@ -811,9 +595,7 @@ const DocumentsPage: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Add New Document Category
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900">Add New Document Category</h2>
               <button
                 onClick={() => setIsAddCategoryModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -823,9 +605,7 @@ const DocumentsPage: React.FC = () => {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category Name
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category Name</label>
                 <input
                   type="text"
                   value={newCategoryName}

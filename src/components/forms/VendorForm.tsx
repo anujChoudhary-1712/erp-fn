@@ -1,13 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useState, useEffect } from 'react';
 import Button from '@/components/ReusableComponents/Button';
 import InputField from '@/components/ReusableComponents/InputField';
-import CategoryApis from '@/actions/Apis/CategoryApis'; // Import CategoryApis for categories
+import CategoryApis from '@/actions/Apis/CategoryApis';
 import DocumentUploadModal from '../modal/DocumentUploadModal';
-import { X, CheckCircle } from 'lucide-react'; // Import CheckCircle
+import { X, CheckCircle, Upload, FileText, Trash2 } from 'lucide-react';
 
-// TypeScript interfaces
+interface DocumentItem {
+  name: string;
+  document: string;
+  fileName?: string;
+  uploadedAt?: string;
+}
+
 interface VendorFormData {
   approved_for: string;
   company_name: string;
@@ -32,7 +39,8 @@ interface VendorFormData {
   gst_no: string;
   pan_no: string;
   is_msme: boolean;
-  document_id?: string; // New field for MSME document ID
+  reg_document_id?: string;
+  documents: DocumentItem[];
 }
 
 interface VendorFormProps {
@@ -52,7 +60,6 @@ interface Category {
   __v: number;
 }
 
-// Indian states list
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
   'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
@@ -93,198 +100,139 @@ const VendorForm: React.FC<VendorFormProps> = ({
     gst_no: '',
     pan_no: '',
     is_msme: false,
-    document_id: undefined, // Initialize as undefined
+    reg_document_id: undefined,
+    documents: [],
     ...initialData
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // States for MSME document upload modal (passed to DocumentUploadModal)
   const [isMsmeUploadModalOpen, setIsMsmeUploadModalOpen] = useState<boolean>(false);
-  const [documentCategories, setDocumentCategories] = useState<string[]>([]); // For MSME document categories
+  const [isDocumentUploadModalOpen, setIsDocumentUploadModalOpen] = useState<boolean>(false);
+  const [documentCategories, setDocumentCategories] = useState<string[]>([]);
   const [isAddDocumentCategoryModalOpen, setIsAddDocumentCategoryModalOpen] = useState<boolean>(false);
   const [newDocumentCategoryName, setNewDocumentCategoryName] = useState<string>("");
   const [documentCategoryObject, setDocumentCategoryObject] = useState<Category | null>(null);
 
-  // States for "Approved For" categories
-  const [approvedForCategories, setApprovedForCategories] = useState<string[]>([]);
-  const [isAddApprovedForCategoryModalOpen, setIsAddApprovedForCategoryModalOpen] = useState<boolean>(false);
-  const [newApprovedForCategoryName, setNewApprovedForCategoryName] = useState<string>("");
-  const [approvedForCategoryObject, setApprovedForCategoryObject] = useState<Category | null>(null);
-
-
-  // Fetch document categories and Approved-For categories on component mount
   useEffect(() => {
     const fetchCategories = async (): Promise<void> => {
       try {
         const res = await CategoryApis.getAllCategories();
         if (res.status === 200) {
-          const docCategory = res.data.find(
-            (cat: Category) => cat.type === "Document-Category"
-          );
+          const docCategory = res.data.find((cat: Category) => cat.type === "Document-Category");
           if (docCategory) {
             setDocumentCategories(docCategory.items);
             setDocumentCategoryObject(docCategory);
-          } else {
-            setDocumentCategories([]);
-            setDocumentCategoryObject(null);
-          }
-
-          const approvedForCat = res.data.find(
-            (cat: Category) => cat.type === "Approved-For-Category"
-          );
-          if (approvedForCat) {
-            setApprovedForCategories(approvedForCat.items);
-            setApprovedForCategoryObject(approvedForCat);
-          } else {
-            setApprovedForCategories([]);
-            setApprovedForCategoryObject(null);
           }
         }
       } catch (error) {
         console.error("Error fetching categories:", error);
-        setDocumentCategories([]);
-        setDocumentCategoryObject(null);
-        setApprovedForCategories([]);
-        setApprovedForCategoryObject(null);
       }
     };
     fetchCategories();
   }, []);
 
-
-  // Update form data when initial data changes (for edit mode)
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
       setFormData(prev => ({ ...prev, ...initialData }));
     }
   }, [initialData]);
 
-  // Re-validate MSME document field when document_id changes
   useEffect(() => {
     if (formData.is_msme) {
-      // Re-run validation specifically for document_id
       const newErrors = { ...errors };
-      if (!formData.document_id) {
-        newErrors.document_id = 'MSME registration document is required.';
+      if (!formData.reg_document_id) {
+        newErrors.reg_document_id = 'MSME registration document is required.';
       } else {
-        delete newErrors.document_id;
+        delete newErrors.reg_document_id;
       }
       setErrors(newErrors);
     }
-  }, [formData.document_id, formData.is_msme]); // Depend on both for complete check
+  }, [formData.reg_document_id, formData.is_msme]);
 
-
-  const updateFormData = (field: keyof VendorFormData, value: string | boolean | undefined): void => {
+  const updateFormData = (field: keyof VendorFormData, value: string | boolean | undefined | DocumentItem[]): void => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
     
-    // Clear error for this field
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
-    // Special handling for is_msme to clear document ID if set to false
     if (field === 'is_msme' && value === false) {
-        setFormData(prev => ({ ...prev, document_id: undefined }));
+      setFormData(prev => ({ ...prev, reg_document_id: undefined }));
     }
   };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Approved For validation
     if (!formData.approved_for.trim()) {
       newErrors.approved_for = 'Approval category is required';
     }
-
-    // Required field validations
     if (!formData.company_name.trim()) {
       newErrors.company_name = 'Company name is required';
     }
-    
     if (!formData.company_address.trim()) {
       newErrors.company_address = 'Company address is required';
     }
-
     if (!formData.state.trim()) {
       newErrors.state = 'State is required';
     }
-
     if (!formData.city.trim()) {
       newErrors.city = 'City is required';
     }
-
     if (!formData.pincode.trim()) {
       newErrors.pincode = 'Pin code is required';
     } else if (!/^\d{6}$/.test(formData.pincode)) {
       newErrors.pincode = 'Pin code must be 6 digits';
     }
-
     if (!formData.mobile_no.trim()) {
       newErrors.mobile_no = 'Mobile number is required';
     } else if (!/^\d{10}$/.test(formData.mobile_no.replace(/[^\d]/g, ''))) {
       newErrors.mobile_no = 'Please enter a valid 10-digit mobile number';
     }
-
     if (!formData.mail.trim()) {
       newErrors.mail = 'Email address is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.mail)) {
       newErrors.mail = 'Please enter a valid email address';
     }
-
     if (!formData.company_type) {
       newErrors.company_type = 'Company type is required';
     }
-
     if (!formData.contact_person.trim()) {
       newErrors.contact_person = 'Contact person is required';
     }
-
     if (!formData.contact_designation.trim()) {
       newErrors.contact_designation = 'Contact designation is required';
     }
-
-    // Banking details validations
-    if (!formData.bank_name.trim()) { // Now just checks if not empty
+    if (!formData.bank_name.trim()) {
       newErrors.bank_name = 'Bank name is required';
     }
-
     if (!formData.branch_name.trim()) {
       newErrors.branch_name = 'Branch name is required';
     }
-
     if (!formData.bank_ifsc.trim()) {
       newErrors.bank_ifsc = 'IFSC code is required';
     } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.bank_ifsc)) {
       newErrors.bank_ifsc = 'Please enter a valid IFSC code';
     }
-
     if (!formData.bank_account_no.trim()) {
       newErrors.bank_account_no = 'Bank account number is required';
     }
-
-    // GST and PAN validations
     if (!formData.gst_no.trim()) {
       newErrors.gst_no = 'GST number is required';
     } else if (!/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(formData.gst_no)) {
       newErrors.gst_no = 'Please enter a valid GST number';
     }
-
     if (!formData.pan_no.trim()) {
       newErrors.pan_no = 'PAN number is required';
     } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.pan_no)) {
       newErrors.pan_no = 'Please enter a valid PAN number';
     }
-
-    // MSME document validation - Crucial check
-    if (formData.is_msme && !formData.document_id) {
-        newErrors.document_id = 'MSME registration document is required.';
+    if (formData.is_msme && !formData.reg_document_id) {
+      newErrors.reg_document_id = 'MSME registration document is required.';
     }
-
-    // Website validation (optional)
     if (formData.website && !/^https?:\/\/.+/.test(formData.website)) {
       newErrors.website = 'Please enter a valid website URL (with http:// or https://)';
     }
@@ -297,7 +245,6 @@ const VendorForm: React.FC<VendorFormProps> = ({
     e.preventDefault();
     
     if (!validateForm()) {
-      // Scroll to the first error if needed
       const firstErrorField = Object.keys(errors).find(key => errors[key]);
       if (firstErrorField) {
         const element = document.getElementById(firstErrorField);
@@ -315,14 +262,28 @@ const VendorForm: React.FC<VendorFormProps> = ({
     }
   };
 
-  // Handlers for MSME DocumentUploadModal
   const handleMsmeDocumentUploadSuccess = (documentId: string) => {
-    updateFormData('document_id', documentId);
-    console.log("documentId", documentId);
-    setIsMsmeUploadModalOpen(false); // Close modal after successful upload
+    updateFormData('reg_document_id', documentId);
+    setIsMsmeUploadModalOpen(false);
   };
 
-  // Handlers for adding new Document Categories (for MSME document upload)
+  const handleDocumentUploadSuccess = (documentId: string, documentName: string, fileName?: string) => {
+    const newDocument: DocumentItem = {
+      name: documentName,
+      document: documentId,
+      fileName: fileName,
+      uploadedAt: new Date().toISOString()
+    };
+    
+    updateFormData('documents', [...formData.documents, newDocument]);
+    setIsDocumentUploadModalOpen(false);
+  };
+
+  const handleRemoveDocument = (index: number) => {
+    const updatedDocuments = formData.documents.filter((_, i) => i !== index);
+    updateFormData('documents', updatedDocuments);
+  };
+
   const handleAddDocumentCategory = async () => {
     if (!newDocumentCategoryName.trim()) {
       alert("Category name cannot be empty.");
@@ -331,29 +292,20 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
     try {
       if (documentCategoryObject) {
-        const updatedItems = [
-          ...documentCategoryObject.items,
-          newDocumentCategoryName.trim(),
-        ];
-        const res = await CategoryApis.updateCategories(
-          documentCategoryObject._id,
-          { items: updatedItems }
-        );
+        const updatedItems = [...documentCategoryObject.items, newDocumentCategoryName.trim()];
+        const res = await CategoryApis.updateCategories(documentCategoryObject._id, { items: updatedItems });
         if (res.status === 200) {
           alert(`Category "${newDocumentCategoryName}" added successfully!`);
-          // Re-fetch categories to update the dropdown in DocumentUploadModal
           const updatedCategoriesRes = await CategoryApis.getAllCategories();
           if (updatedCategoriesRes.status === 200) {
-            const docCategory = updatedCategoriesRes.data.find(
-              (cat: Category) => cat.type === "Document-Category"
-            );
+            const docCategory = updatedCategoriesRes.data.find((cat: Category) => cat.type === "Document-Category");
             if (docCategory) {
               setDocumentCategories(docCategory.items);
               setDocumentCategoryObject(docCategory);
             }
           }
           setNewDocumentCategoryName("");
-          setIsAddDocumentCategoryModalOpen(false); // Close add category modal
+          setIsAddDocumentCategoryModalOpen(false);
         }
       } else {
         const res = await CategoryApis.createCategory({
@@ -362,19 +314,16 @@ const VendorForm: React.FC<VendorFormProps> = ({
         });
         if (res.status === 201) {
           alert(`Category "${newDocumentCategoryName}" added successfully!`);
-          // Re-fetch categories
           const updatedCategoriesRes = await CategoryApis.getAllCategories();
           if (updatedCategoriesRes.status === 200) {
-            const docCategory = updatedCategoriesRes.data.find(
-              (cat: Category) => cat.type === "Document-Category"
-            );
+            const docCategory = updatedCategoriesRes.data.find((cat: Category) => cat.type === "Document-Category");
             if (docCategory) {
               setDocumentCategories(docCategory.items);
               setDocumentCategoryObject(docCategory);
             }
           }
           setNewDocumentCategoryName("");
-          setIsAddDocumentCategoryModalOpen(false); // Close add category modal
+          setIsAddDocumentCategoryModalOpen(false);
         }
       }
     } catch (error) {
@@ -382,68 +331,6 @@ const VendorForm: React.FC<VendorFormProps> = ({
       alert("Failed to add category. Please try again.");
     }
   };
-
-  // Handlers for adding new Approved-For Categories
-  const handleAddApprovedForCategory = async () => {
-    if (!newApprovedForCategoryName.trim()) {
-      alert("Category name cannot be empty.");
-      return;
-    }
-
-    try {
-      if (approvedForCategoryObject) {
-        const updatedItems = [
-          ...approvedForCategoryObject.items,
-          newApprovedForCategoryName.trim(),
-        ];
-        const res = await CategoryApis.updateCategories(
-          approvedForCategoryObject._id,
-          { items: updatedItems }
-        );
-        if (res.status === 200) {
-          alert(`Category "${newApprovedForCategoryName}" added successfully!`);
-          // Re-fetch categories to update the dropdown
-          const updatedCategoriesRes = await CategoryApis.getAllCategories();
-          if (updatedCategoriesRes.status === 200) {
-            const approvedForCat = updatedCategoriesRes.data.find(
-              (cat: Category) => cat.type === "Approved-For-Category"
-            );
-            if (approvedForCat) {
-              setApprovedForCategories(approvedForCat.items);
-              setApprovedForCategoryObject(approvedForCat);
-            }
-          }
-          setNewApprovedForCategoryName("");
-          setIsAddApprovedForCategoryModalOpen(false); // Close add category modal
-        }
-      } else {
-        const res = await CategoryApis.createCategory({
-          type: "Approved-For-Category",
-          items: [newApprovedForCategoryName.trim()],
-        });
-        if (res.status === 201) {
-          alert(`Category "${newApprovedForCategoryName}" added successfully!`);
-          // Re-fetch categories
-          const updatedCategoriesRes = await CategoryApis.getAllCategories();
-          if (updatedCategoriesRes.status === 200) {
-            const approvedForCat = updatedCategoriesRes.data.find(
-              (cat: Category) => cat.type === "Approved-For-Category"
-            );
-            if (approvedForCat) {
-              setApprovedForCategories(approvedForCat.items);
-              setApprovedForCategoryObject(approvedForCat);
-            }
-          }
-          setNewApprovedForCategoryName("");
-          setIsAddApprovedForCategoryModalOpen(false); // Close add category modal
-        }
-      }
-    } catch (error) {
-      console.error("Error adding/updating category:", error);
-      alert("Failed to add category. Please try again.");
-    }
-  };
-
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white">
@@ -455,43 +342,19 @@ const VendorForm: React.FC<VendorFormProps> = ({
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Company Information</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Approved For - Now a select field with dynamic categories */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Approved For <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  value={formData.approved_for}
-                  onChange={(e) => {
-                    if (e.target.value === "add-new-approved-for-category") {
-                      setIsAddApprovedForCategoryModalOpen(true);
-                      updateFormData('approved_for', ''); // Clear selection for now
-                    } else {
-                      updateFormData('approved_for', e.target.value);
-                    }
-                  }}
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.approved_for ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  required
-                  id="approved_for" // Added ID for scrolling
-                >
-                  <option value="">-- Select approval category --</option>
-                  {approvedForCategories.map((category, index) => (
-                    <option key={index} value={category}>{category}</option>
-                  ))}
-                  <option value="add-new-approved-for-category" className="font-bold">
-                    + Add New Category
-                  </option>
-                </select>
-                {errors.approved_for && (
-                  <p className="mt-1 text-sm text-red-600">{errors.approved_for}</p>
-                )}
-              </div>
+              <InputField
+                label="Approved For"
+                value={formData.approved_for}
+                onChange={(e) => updateFormData('approved_for', e.target.value)}
+                placeholder="Enter approval category"
+                required
+                error={errors.approved_for}
+                id="approved_for"
+              />
             </div>
             
-            <div></div> {/* Empty div for spacing */}
+            <div></div>
             
             <div className="md:col-span-2">
               <InputField
@@ -501,7 +364,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                 placeholder="Enter company name"
                 required
                 error={errors.company_name}
-                id="company_name" // Added ID for scrolling
+                id="company_name"
               />
             </div>
 
@@ -518,7 +381,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                 }`}
                 rows={3}
                 required
-                id="company_address" // Added ID for scrolling
+                id="company_address"
               />
               {errors.company_address && (
                 <p className="mt-1 text-sm text-red-600">{errors.company_address}</p>
@@ -536,7 +399,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                   errors.state ? 'border-red-500' : 'border-gray-300'
                 }`}
                 required
-                id="state" // Added ID for scrolling
+                id="state"
               >
                 <option value="">-- Please select --</option>
                 {INDIAN_STATES.map((state) => (
@@ -555,7 +418,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               placeholder="Enter city"
               required
               error={errors.city}
-              id="city" // Added ID for scrolling
+              id="city"
             />
 
             <InputField
@@ -566,7 +429,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               required
               error={errors.pincode}
               maxLength={6}
-              id="pincode" // Added ID for scrolling
+              id="pincode"
             />
 
             <InputField
@@ -577,7 +440,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               required
               error={errors.mobile_no}
               type="tel"
-              id="mobile_no" // Added ID for scrolling
+              id="mobile_no"
             />
 
             <InputField
@@ -596,7 +459,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               required
               error={errors.mail}
               type="email"
-              id="mail" // Added ID for scrolling
+              id="mail"
             />
 
             <InputField
@@ -609,7 +472,6 @@ const VendorForm: React.FC<VendorFormProps> = ({
             />
           </div>
 
-          {/* Company Type */}
           <div className="mt-6">
             <label className="block text-sm font-medium text-gray-700 mb-4" id="company_type">
               Company Type <span className="text-red-500">*</span>
@@ -649,7 +511,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               placeholder="Enter contact person name"
               required
               error={errors.contact_person}
-              id="contact_person" // Added ID for scrolling
+              id="contact_person"
             />
 
             <div className="md:col-span-2">
@@ -660,7 +522,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                 placeholder="Enter contact person designation"
                 required
                 error={errors.contact_designation}
-                id="contact_designation" // Added ID for scrolling
+                id="contact_designation"
               />
             </div>
           </div>
@@ -671,7 +533,6 @@ const VendorForm: React.FC<VendorFormProps> = ({
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Banking Details</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Bank Name - Now an input field */}
             <InputField
               label="Bank Name"
               value={formData.bank_name}
@@ -679,7 +540,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               placeholder="Enter bank name"
               required
               error={errors.bank_name}
-              id="bank_name" // Added ID for scrolling
+              id="bank_name"
             />
 
             <InputField
@@ -689,7 +550,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               placeholder="Enter branch name"
               required
               error={errors.branch_name}
-              id="branch_name" // Added ID for scrolling
+              id="branch_name"
             />
 
             <InputField
@@ -699,7 +560,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               placeholder="Enter account number"
               required
               error={errors.bank_account_no}
-              id="bank_account_no" // Added ID for scrolling
+              id="bank_account_no"
             />
 
             <InputField
@@ -710,7 +571,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               required
               error={errors.bank_ifsc}
               maxLength={11}
-              id="bank_ifsc" // Added ID for scrolling
+              id="bank_ifsc"
             />
 
             <InputField
@@ -742,7 +603,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
               required
               error={errors.gst_no}
               maxLength={15}
-              id="gst_no" // Added ID for scrolling
+              id="gst_no"
             />
 
             <InputField
@@ -753,11 +614,10 @@ const VendorForm: React.FC<VendorFormProps> = ({
               required
               error={errors.pan_no}
               maxLength={10}
-              id="pan_no" // Added ID for scrolling
+              id="pan_no"
             />
           </div>
 
-          {/* MSME Unit */}
           <div className="mt-6">
             <div className="flex items-center space-x-6">
               <span className="text-sm font-medium text-gray-700">ARE YOU AN MSME UNIT?</span>
@@ -785,34 +645,96 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
             {formData.is_msme && (
               <div className="mt-4 max-w-md">
-                <label className="block text-sm font-medium text-gray-700 mb-2" id="document_id">
-                    MSME Registration Document <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2" id="reg_document_id">
+                  MSME Registration Document <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center space-x-2">
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => setIsMsmeUploadModalOpen(true)}
-                        className="px-4 py-2"
-                    >
-                        {formData.document_id ? "Change Document" : "Upload Document"}
-                    </Button>
-                    {/* Visual confirmation */}
-                    {formData.document_id && (
-                        <span className="text-sm text-green-600 flex items-center gap-1">
-                            <CheckCircle className="h-4 w-4" /> Document Uploaded!
-                        </span>
-                    )}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setIsMsmeUploadModalOpen(true)}
+                    className="px-4 py-2"
+                  >
+                    {formData.reg_document_id ? "Change Document" : "Upload Document"}
+                  </Button>
+                  {formData.reg_document_id && (
+                    <span className="text-sm text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4" /> Document Uploaded!
+                    </span>
+                  )}
                 </div>
-                {errors.document_id && (
-                    <p className="mt-1 text-sm text-red-600">{errors.document_id}</p>
+                {errors.reg_document_id && (
+                  <p className="mt-1 text-sm text-red-600">{errors.reg_document_id}</p>
                 )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Submit Button */}
+        {/* Documents Section */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Additional Documents</h2>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => setIsDocumentUploadModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Upload Document
+            </Button>
+          </div>
+
+          {formData.documents.length === 0 ? (
+            <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
+              <FileText className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+              <p className="text-gray-600 mb-3">No documents uploaded</p>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsDocumentUploadModalOpen(true)}
+                className="flex items-center gap-2 mx-auto"
+              >
+                <Upload className="h-4 w-4" />
+                Upload Document
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {formData.documents.map((doc, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-white border rounded-lg"
+                >
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-5 w-5 text-blue-500" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                      {doc.fileName && (
+                        <p className="text-xs text-gray-500">{doc.fileName}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                      Uploaded
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => handleRemoveDocument(index)}
+                      className="p-1 text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end pt-6">
           <Button
             type="submit"
@@ -825,69 +747,31 @@ const VendorForm: React.FC<VendorFormProps> = ({
         </div>
       </form>
 
-      {/* MSME Document Upload Modal */}
       <DocumentUploadModal
         isOpen={isMsmeUploadModalOpen}
         onClose={() => setIsMsmeUploadModalOpen(false)}
         onUploadSuccess={handleMsmeDocumentUploadSuccess}
         documentCategories={documentCategories}
         isAddingCategory={isAddDocumentCategoryModalOpen}
-        onAddCategory={() => setIsAddDocumentCategoryModalOpen(prev => !prev)} // Toggle add category modal
+        onAddCategory={() => setIsAddDocumentCategoryModalOpen(prev => !prev)}
         onNewCategoryNameChange={setNewDocumentCategoryName}
         onAddCategorySubmit={handleAddDocumentCategory}
         newCategoryName={newDocumentCategoryName}
+        uploadType="msme"
       />
 
-      {/* Add New Approved-For Category Modal */}
-      {isAddApprovedForCategoryModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Add New Approval Category
-              </h2>
-              <button
-                onClick={() => setIsAddApprovedForCategoryModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category Name
-                </label>
-                <InputField
-                  type="text"
-                  value={newApprovedForCategoryName}
-                  onChange={(e) => setNewApprovedForCategoryName(e.target.value)}
-                  placeholder="Enter new category name..."
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setIsAddApprovedForCategoryModalOpen(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={handleAddApprovedForCategory}
-                  disabled={!newApprovedForCategoryName.trim()}
-                  className="flex-1"
-                >
-                  Add Category
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <DocumentUploadModal
+        isOpen={isDocumentUploadModalOpen}
+        onClose={() => setIsDocumentUploadModalOpen(false)}
+        onUploadSuccess={handleDocumentUploadSuccess}
+        documentCategories={documentCategories}
+        isAddingCategory={isAddDocumentCategoryModalOpen}
+        onAddCategory={() => setIsAddDocumentCategoryModalOpen(prev => !prev)}
+        onNewCategoryNameChange={setNewDocumentCategoryName}
+        onAddCategorySubmit={handleAddDocumentCategory}
+        newCategoryName={newDocumentCategoryName}
+        uploadType="general"
+      />
     </div>
   );
 };

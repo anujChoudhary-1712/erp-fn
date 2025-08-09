@@ -4,6 +4,9 @@ import VendorApis from "@/actions/Apis/VendorApis";
 import Button from "@/components/ReusableComponents/Button";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FileText } from "lucide-react";
+import DocumentCard from "@/components/DocumentCard";
+import { Document } from "../../documents/page";
 
 // TypeScript interface for vendor data
 interface Vendor {
@@ -32,13 +35,27 @@ interface Vendor {
   pan_no: string;
   is_msme: boolean;
   msme_reg_no?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  documents: Array<{
+    name: string;
+    document: {
+      _id: string;
+      documents: Document[];
+      latest_doc_id: string;
+    };
+  }>;
+  reg_document_id?: {
+    _id: string;
+    documents: Document[];
+    latest_doc_id: string;
+  };
 }
 
 const SingleVendorPage = ({ params }: { params: { id: string } }) => {
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
-  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [actionLoading, setActionLoading] = useState<boolean>(false);
   const router = useRouter();
 
   const fetchVendorDetails = async (id: string) => {
@@ -59,9 +76,34 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
     }
   };
 
+  const handleUpdateStatus = async (newStatus: 'approved' | 'rejected') => {
+    if (!vendor) return;
+
+    const confirmMessage = `Are you sure you want to ${newStatus} this vendor?`;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const res = await VendorApis.updateVendor(vendor._id, { status: newStatus });
+      if (res.status === 200) {
+        setVendor(prev => prev ? { ...prev, status: newStatus } : null);
+        alert(`Vendor ${newStatus} successfully!`);
+      } else {
+        alert(`Failed to ${newStatus} vendor`);
+      }
+    } catch (error: any) {
+      console.error(`Error updating vendor status to ${newStatus}:`, error);
+      alert(error.message || `Failed to ${newStatus} vendor`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleDeleteVendor = async () => {
     if (window.confirm("Are you sure you want to delete this vendor? This action cannot be undone.")) {
-      setDeleteLoading(true);
+      setActionLoading(true);
       try {
         const res = await VendorApis.deleteVendor(params.id);
         if (res.status === 200) {
@@ -74,13 +116,75 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
         console.error("Error deleting vendor:", error);
         alert(error.message || "Failed to delete vendor");
       } finally {
-        setDeleteLoading(false);
+        setActionLoading(false);
       }
     }
   };
 
   const handleEditVendor = () => {
     router.push(`/dashboard/vendors/${params.id}/edit`);
+  };
+
+  // Helper function to extract document data from the nested structure
+  const extractDocumentData = (documentObj: any): Document | null => {
+    if (!documentObj || !documentObj.documents || documentObj.documents.length === 0) {
+      return null;
+    }
+
+    // Get the latest document
+    const latestDoc = documentObj.documents.find(
+      (doc: any) => doc._id === documentObj.latest_doc_id
+    ) || documentObj.documents[0];
+
+    return {
+      _id: latestDoc._id,
+      docName: latestDoc.docName,
+      fileName: latestDoc.fileName,
+      fileSize: latestDoc.fileSize,
+      link: latestDoc.link,
+      status: latestDoc.status,
+      docType: latestDoc.docType,
+      uploadDate: latestDoc.uploadDate,
+      description: latestDoc.description,
+      outerId: latestDoc.outerId, // Add this line
+      org_id: latestDoc.org_id, // Add this line
+      createdAt: latestDoc.createdAt, // Add this line
+      updatedAt: latestDoc.updatedAt, // Add this line
+      __v: latestDoc.__v, // Add this line
+    };
+  };
+
+  // Get all documents for display
+  const getAllDocuments = (): Document[] => {
+    if (!vendor) return [];
+
+    const allDocs: Document[] = [];
+
+    // Add MSME document if exists
+    if (vendor.reg_document_id) {
+      const msmeDoc = extractDocumentData(vendor.reg_document_id);
+      if (msmeDoc) {
+        allDocs.push({
+          ...msmeDoc,
+          docName: `MSME Registration - ${msmeDoc.docName}`,
+        });
+      }
+    }
+
+    // Add additional documents
+    if (vendor.documents && vendor.documents.length > 0) {
+      vendor.documents.forEach((docItem) => {
+        const doc = extractDocumentData(docItem.document);
+        if (doc) {
+          allDocs.push({
+            ...doc,
+            docName: docItem.name || doc.docName,
+          });
+        }
+      });
+    }
+
+    return allDocs;
   };
 
   useEffect(() => {
@@ -144,6 +248,20 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
     );
   }
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-100 text-green-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'pending':
+      default:
+        return 'bg-yellow-100 text-yellow-800';
+    }
+  };
+
+  const allDocuments = getAllDocuments();
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-6xl">
@@ -177,11 +295,20 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
                 {vendor.company_type} • {vendor.city}, {vendor.state}
               </p>
             </div>
+            
+            {/* Vendor Status Badge */}
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(vendor.status)}`}
+            >
+              {vendor.status?.charAt(0).toUpperCase() + vendor.status?.slice(1)}
+            </span>
+            
             <div className="flex space-x-3">
               <Button
                 variant="outline"
                 onClick={handleEditVendor}
                 className="flex items-center space-x-2"
+                disabled={actionLoading}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -191,21 +318,46 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
               <Button
                 variant="danger"
                 onClick={handleDeleteVendor}
-                disabled={deleteLoading}
+                disabled={actionLoading}
                 className="flex items-center space-x-2"
               >
-                {deleteLoading ? (
+                {actionLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 )}
-                <span>{deleteLoading ? 'Deleting...' : 'Delete'}</span>
+                <span>{actionLoading ? 'Deleting...' : 'Delete'}</span>
               </Button>
             </div>
           </div>
         </div>
+
+        {/* Action Buttons for Pending Status */}
+        {vendor.status === 'pending' && (
+          <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Review Vendor</h2>
+            <div className="flex space-x-4">
+              <Button
+                variant="success"
+                onClick={() => handleUpdateStatus('approved')}
+                disabled={actionLoading}
+                className="flex-1"
+              >
+                {actionLoading ? 'Approving...' : 'Approve Vendor'}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => handleUpdateStatus('rejected')}
+                disabled={actionLoading}
+                className="flex-1"
+              >
+                {actionLoading ? 'Rejecting...' : 'Reject Vendor'}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Vendor Details */}
         <div className="space-y-6">
@@ -355,10 +507,33 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
               )}
             </div>
           </div>
+
+          {/* Documents Section */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Documents</h2>
+            
+            {allDocuments.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {allDocuments.map((doc, index) => (
+                  <DocumentCard
+                    key={`${doc._id}-${index}`}
+                    document={doc}
+                    showActions={false}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
+                <p className="text-gray-500">This vendor has not uploaded any documents yet.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default SingleVendorPage
+export default SingleVendorPage;
