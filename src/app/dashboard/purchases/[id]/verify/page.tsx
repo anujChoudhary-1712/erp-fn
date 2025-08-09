@@ -344,7 +344,7 @@ const VerifyPurchasePage = ({ params }: { params: { id: string } }) => {
       if (response.status === 200 || response.status === 201) {
         setSuccess("Purchase requirement approved successfully!");
         setTimeout(() => {
-          router.push(`/dashboard/planning/purchase/${params.id}`);
+          router.push(`/dashboard/purchases/${params.id}`);
         }, 2000);
       } else {
         throw new Error(response.data?.message || "Failed to approve purchase requirement");
@@ -386,7 +386,7 @@ const VerifyPurchasePage = ({ params }: { params: { id: string } }) => {
       if (response.status === 200 || response.status === 201) {
         setSuccess("Purchase requirement rejected successfully!");
         setTimeout(() => {
-          router.push(`/dashboard/planning/purchase/${params.id}`);
+          router.push(`/dashboard/purchases/${params.id}`);
         }, 2000);
       } else {
         throw new Error(response.data?.message || "Failed to reject purchase requirement");
@@ -763,20 +763,7 @@ const VerifyPurchasePage = ({ params }: { params: { id: string } }) => {
                         </div>
                       );
                     })}
-                    
-                    {/* Submit Ratings Button */}
-                    <div className="flex justify-center pt-4 border-t border-gray-200">
-                      <Button
-                        variant="primary"
-                        onClick={submitVendorRatings}
-                        disabled={submittingRating || Object.values(vendorRatings).every(rating => 
-                          rating.quality === 0 && rating.delivery === 0 && rating.price === 0 && rating.communication === 0
-                        )}
-                        className="px-6 py-2"
-                      >
-                        {submittingRating ? 'Submitting Ratings...' : '⭐ Submit Vendor Ratings'}
-                      </Button>
-                    </div>
+                  
                   </div>
                 )}
               </div>
@@ -914,6 +901,26 @@ const VerifyPurchasePage = ({ params }: { params: { id: string } }) => {
                               </p>
                             </div>
                           )}
+                                              {/* Submit Vendor Ratings Button */}
+                    <div className="flex justify-center pt-6 border-t border-gray-200">
+                      <Button
+                        variant="primary"
+                        onClick={submitVendorRatings}
+                        disabled={submittingRating || Object.values(vendorRatings).every(rating => 
+                          rating.quality === 0 && rating.delivery === 0 && rating.price === 0 && rating.communication === 0
+                        )}
+                        className="px-8 py-3 text-base"
+                      >
+                        {submittingRating ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Submitting Ratings...
+                          </>
+                        ) : (
+                          '⭐ Submit Vendor Ratings'
+                        )}
+                      </Button>
+                    </div>
                         </div>
                       );
                     })}

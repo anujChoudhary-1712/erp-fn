@@ -72,7 +72,7 @@ const CreatePurchasePage: React.FC = () => {
         setSuccess("Purchase requirement created successfully!");
         // Wait for 2 seconds before redirecting
         setTimeout(() => {
-          router.push("/dashboard/planning/purchase");
+          router.push("/dashboard/purchases");
         }, 1000);
       } else {
         throw new Error(response.data?.message || "Failed to create purchase requirement");

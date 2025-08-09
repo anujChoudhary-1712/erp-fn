@@ -22,6 +22,16 @@ interface Material {
   __v: number;
 }
 
+interface Machinery {
+  _id: string;
+  name: string;
+}
+
+interface Misc {
+  _id: string;
+  itemName: string;
+}
+
 interface Vendor {
   _id: string;
   name: string;
@@ -50,15 +60,18 @@ interface TimelineEntry {
 
 interface Purchase {
   _id: string;
-  materials: PurchaseMaterial[];
+  purchaseRequestType: "Material" | "Machinery" | "Misc";
+  materials?: PurchaseMaterial[];
+  machineryId?: Machinery;
+  misc_id?: Misc;
   requiredBy: string;
-  estimatedDate: string;
+  estimatedDate?: string;
   status: string;
-  instructions: string;
+  instructions?: string;
   documents: any[];
   timeline: TimelineEntry[];
   org_id: string;
-  fulfillment: any[];
+  fulfillment?: any[];
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -78,21 +91,18 @@ const PurchasePlanningPage: React.FC = () => {
 
   const router = useRouter();
 
-  // Calculate counts for each tab
+  // Calculate counts for each tab based on purchaseRequestType
   const getTabCounts = (purchases: Purchase[]) => {
     const counts = {
       all: purchases.length,
-      pending: purchases.filter(
-        (purchase) => purchase.status?.toLowerCase() === "pending"
+      Material: purchases.filter(
+        (purchase) => purchase.purchaseRequestType === "Material"
       ).length,
-      verification: purchases.filter(
-        (purchase) => purchase.status?.toLowerCase() === "verification needed"
+      Machinery: purchases.filter(
+        (purchase) => purchase.purchaseRequestType === "Machinery"
       ).length,
-      approved: purchases.filter(
-        (purchase) => purchase.status?.toLowerCase() === "approved"
-      ).length,
-      rejected: purchases.filter(
-        (purchase) => purchase.status?.toLowerCase() === "rejected"
+      Misc: purchases.filter(
+        (purchase) => purchase.purchaseRequestType === "Misc"
       ).length,
     };
     return counts;
@@ -101,11 +111,10 @@ const PurchasePlanningPage: React.FC = () => {
   const tabCounts = getTabCounts(allPurchases);
 
   const tabs: Tab[] = [
-    { id: "all", label: "All Purchases", count: tabCounts.all },
-    { id: "pending", label: "Pending", count: tabCounts.pending },
-    { id: "verification", label: "Verification Needed", count: tabCounts.verification },
-    { id: "approved", label: "Approved", count: tabCounts.approved },
-    { id: "rejected", label: "Rejected", count: tabCounts.rejected },
+    { id: "all", label: "All Requirements", count: tabCounts.all },
+    { id: "Material", label: "Material", count: tabCounts.Material },
+    { id: "Machinery", label: "Machinery", count: tabCounts.Machinery },
+    { id: "Misc", label: "Miscellaneous", count: tabCounts.Misc },
   ];
 
   const fetchPurchases = async (type: string): Promise<void> => {
@@ -114,14 +123,13 @@ const PurchasePlanningPage: React.FC = () => {
       const res = await PurchaseReqApis.getAllPurchases();
 
       if (res.status === 200) {
-        const allPurchaseData = res.data || [];
+        const allPurchaseData = res.data?.requirements || [];
         
         // Filter based on type
         let filteredPurchases = allPurchaseData;
         if (type !== "all") {
-          const statusToFilter = type === "verification" ? "verification needed" : type;
           filteredPurchases = allPurchaseData.filter(
-            (purchase: Purchase) => purchase.status?.toLowerCase() === statusToFilter
+            (purchase: Purchase) => purchase.purchaseRequestType === type
           );
         }
 
@@ -146,7 +154,7 @@ const PurchasePlanningPage: React.FC = () => {
       try {
         const res = await PurchaseReqApis.getAllPurchases();
         if (res.status === 200) {
-          setAllPurchases(res.data || []);
+          setAllPurchases(res.data?.requirements || []);
         }
       } catch (error) {
         console.error("Error fetching all purchases for counts:", error);
@@ -161,23 +169,24 @@ const PurchasePlanningPage: React.FC = () => {
   }, [activeTab]);
 
   const handleViewDetails = (purchaseId: string) => {
-    router.push(`/dashboard/planning/purchase/${purchaseId}`);
+    router.push(`/dashboard/purchases/${purchaseId}`);
   };
 
-  // Helper function to get materials display string
-  const getMaterialsDisplay = (materials: PurchaseMaterial[]): string => {
-    if (materials.length === 0) return "No materials";
-    if (materials.length === 1) {
-      return `${materials[0].materialId.material_name} (${materials[0].quantity})`;
+  // Helper function to get a title for the card
+  const getPurchaseTitle = (purchase: Purchase): string => {
+    switch (purchase.purchaseRequestType) {
+      case "Material":
+        if (purchase.materials && purchase.materials.length > 0) {
+          return `${purchase.materials[0].materialId.material_name} (${purchase.materials.length} item${purchase.materials.length > 1 ? 's' : ''})`;
+        }
+        return "Material Request";
+      case "Machinery":
+        return purchase.machineryId?.name || "Machinery Request";
+      case "Misc":
+        return purchase.misc_id?.itemName || "Miscellaneous Request";
+      default:
+        return "Purchase Request";
     }
-    return `${materials[0].materialId.material_name} (${materials[0].quantity}) +${materials.length - 1} more`;
-  };
-
-  // Helper function to calculate total estimated cost
-  const calculateEstimatedCost = (materials: PurchaseMaterial[]): number => {
-    return materials.reduce((total, material) => {
-      return total + (material.materialId.unit_cost * material.quantity);
-    }, 0);
   };
 
   const PurchaseCard: React.FC<{ purchase: Purchase; index: number }> = ({ purchase, index }) => (
@@ -191,29 +200,29 @@ const PurchasePlanningPage: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900">
             PR-{String(index + 1).padStart(3, '0')}
           </h3>
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-              purchase.status
-            )}`}
-          >
-            {purchase.status?.charAt(0).toUpperCase() + purchase.status?.slice(1)}
-          </span>
         </div>
       </div>
 
       {/* Purchase Details */}
       <div className="space-y-3 mb-4">
         <div className="flex justify-between items-start">
-          <span className="text-sm text-gray-600">Materials (qty):</span>
+          <span className="text-sm text-gray-600">Type:</span>
+          <span className="text-sm font-medium text-gray-900 text-right">
+            {purchase.purchaseRequestType}
+          </span>
+        </div>
+
+        <div className="flex justify-between items-start">
+          <span className="text-sm text-gray-600">Item:</span>
           <span className="text-sm font-medium text-gray-900 text-right max-w-48 truncate">
-            {getMaterialsDisplay(purchase.materials)}
+            {getPurchaseTitle(purchase)}
           </span>
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">Estimated Date:</span>
+          <span className="text-sm text-gray-600">Status:</span>
           <span className="text-sm font-medium text-gray-900">
-            {formatDate(purchase.estimatedDate)}
+            {purchase.status}
           </span>
         </div>
 
@@ -223,26 +232,7 @@ const PurchasePlanningPage: React.FC = () => {
             {formatDate(purchase.createdAt)}
           </span>
         </div>
-
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">Total Materials:</span>
-          <span className="text-sm font-medium text-gray-900">
-            {purchase.materials.length}
-          </span>
-        </div>
       </div>
-
-      {/* Instructions Preview */}
-      {purchase.instructions && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-md">
-          <p className="text-xs text-gray-600 mb-1">Instructions:</p>
-          <p className="text-sm text-gray-800 line-clamp-2">
-            {purchase.instructions.length > 100 
-              ? `${purchase.instructions.substring(0, 100)}...` 
-              : purchase.instructions}
-          </p>
-        </div>
-      )}
 
       {/* Action Hover Effect */}
       <div className="pt-4 border-t border-gray-100">
@@ -266,7 +256,7 @@ const PurchasePlanningPage: React.FC = () => {
           variant="primary"
           className="w-full md:w-auto"
           onClick={() => {
-            router.push("/dashboard/planning/purchase/create");
+            router.push("/dashboard/purchases/create");
           }}
         >
           + Create Purchase Requirement
@@ -283,33 +273,23 @@ const PurchasePlanningPage: React.FC = () => {
               </p>
               <p className="text-sm text-gray-600">Total Requirements</p>
             </div>
-            {/* <div>
+            <div>
               <p className="text-2xl font-bold text-blue-600">
-                {allPurchases.reduce(
-                  (sum: number, purchase: Purchase) =>
-                    sum + (purchase.materials?.length || 0),
-                  0
-                )}
+                {tabCounts.Material}
               </p>
-              <p className="text-sm text-gray-600">Total Materials</p>
-            </div> */}
+              <p className="text-sm text-gray-600">Material</p>
+            </div>
             <div>
               <p className="text-2xl font-bold text-orange-600">
-                {tabCounts.pending}
+                {tabCounts.Machinery}
               </p>
-              <p className="text-sm text-gray-600">Pending</p>
+              <p className="text-sm text-gray-600">Machinery</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-green-600">
-                {tabCounts.approved}
+                {tabCounts.Misc}
               </p>
-              <p className="text-sm text-gray-600">Approved</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-red-600">
-                {tabCounts.rejected}
-              </p>
-              <p className="text-sm text-gray-600">Rejected</p>
+              <p className="text-sm text-gray-600">Miscellaneous</p>
             </div>
           </div>
         </div>
@@ -373,7 +353,7 @@ const PurchasePlanningPage: React.FC = () => {
               <Button
                 variant="primary"
                 onClick={() => {
-                  router.push("/dashboard/planning/purchase/create");
+                  router.push("/dashboard/purchases/create");
                 }}
               >
                 Create Your First Purchase Requirement

@@ -18,12 +18,24 @@ const verifyPurchase = async (id: string, data: any) => {
     return ApiCalls.patchResponse(`/purchase-requirements/${id}/verify`, data, getCookie("token"));
 }
 
-const updateStatus = async (id: string) => {
-    return ApiCalls.patchResponse(`/purchase-requirements/${id}/status`, null, getCookie("token"))
+const updateStatus = async (id: string, status: string) => {
+    return ApiCalls.patchResponse(`/purchase-requirements/${id}/status`, { status }, getCookie("token"))
 }
 
 const getSinglePurchase = async (id: string) => {
     return ApiCalls.getResponse(`/purchase-requirements/${id}`, {}, getCookie("token"))
+}
+
+const evaluateVendors = async (id: string, data: any) => {
+    return ApiCalls.postResponse(`/purchase-requirements/${id}/vendor-evaluation`, data, getCookie("token"));
+}
+
+const selectVendor = async (id: string, data: any) => {
+    return ApiCalls.patchResponse(`/purchase-requirements/${id}/vendor-selection`, data, getCookie("token"));
+}
+
+const purchaseReceived = async (id: string, data: any) => {
+    return ApiCalls.patchResponse(`/purchase-requirements/${id}/purchase-received`, data, getCookie("token"));
 }
 
 const PurchaseReqApis = {
@@ -32,7 +44,7 @@ const PurchaseReqApis = {
     fulfillPurchase,
     verifyPurchase,
     updateStatus,
-    getSinglePurchase
+    getSinglePurchase, evaluateVendors, selectVendor, purchaseReceived
 }
 
 export default PurchaseReqApis;

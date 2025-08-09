@@ -180,6 +180,7 @@ const FulfillRequirementPage = ({ params }: { params: { id: string } }) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("description", description);
+    formData.append("docName",`invoice-${Date.now()}-${file.name}`);
 
     try {
       const token = getCookie("token");
@@ -295,7 +296,7 @@ const FulfillRequirementPage = ({ params }: { params: { id: string } }) => {
       if (response.status === 200 || response.status === 201) {
         setSuccess("Purchase requirement fulfilled successfully!");
         setTimeout(() => {
-          router.push(`/dashboard/planning/purchase/${params.id}`);
+          router.push(`/dashboard/purchases/${params.id}`);
         }, 2000);
       } else {
         throw new Error(response.data?.message || "Failed to fulfill purchase requirement");

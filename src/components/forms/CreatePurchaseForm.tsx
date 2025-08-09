@@ -1,598 +1,581 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useEffect } from 'react';
-import InputField from '@/components/ReusableComponents/InputField';
-import Button from '@/components/ReusableComponents/Button';
-import RawMaterialApis from '@/actions/Apis/RawMaterialApis';
-import VendorApis from '@/actions/Apis/VendorApis';
-import { getCookie } from '@/actions/CookieUtils';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
+import Button from "@/components/ReusableComponents/Button";
+import PurchaseReqApis from "@/actions/Apis/PurchaseReqApis";
+import MachineryApis from "@/actions/Apis/MachineryApis";
+import MachineryForm from "./MachineryForm";
+import MaterialsForm from "./MaterialsForm";
 
-// TypeScript interfaces
-interface PurchaseItem {
-  materialId: string;
-  materialName: string;
-  unit: string;
-  unitCost: number;
-  quantity: number;
-  vendorId: string;
-  vendorName: string;
-  notes: string;
-  // New fields for vendor evaluation
-  criticality: string;
-  expected_days: number;
+// Define the purchase type options
+const PURCHASE_TYPES = {
+  MATERIALS: "Material",
+  MACHINERY: "Machinery",
+  MISC: "Misc",
+};
+
+// TypeScript interface for machinery form data
+interface MachineryFormData {
+  // All machinery form fields as defined in MachineryForm component
+  standard_type: string;
+  discipline: string;
+  group: string;
+  device_type: string;
+  name: string;
+  lab_id: string;
+  sr_no: string;
+  make: string;
+  model: string;
+  procurement: string;
+  commissioning: string;
+  instruction_manual: string;
+  location: string;
+  tolerance_sign: string;
+  acceptance_criteria: string;
+  acceptance_criteria_unit_type: string;
+  verification_conformity: string;
+  certificate_no: string;
+  calibration_agency: string;
+  calibration_date: string;
+  calibration_frequency: string;
+  valid_upto: string;
+  ulr_no: string;
+  coverage_factor: string;
+  master_error: string;
+  error_unit: string;
+  drift_in_standard: string;
+  plan_type: string;
+  maintenance_frequency: string;
 }
 
-interface Document {
-  documentId: string;
-  file?: File;
-  description: string;
-}
-
-interface PurchaseFormData {
-  materials: PurchaseItem[];
-  estimatedDate: string;
-  instructions: string;
-  documents: Document[];
-}
-
-interface RawMaterial {
-  _id: string;
-  material_name: string;
-  description: string;
-  unit: string;
-  current_stock: number;
-  unit_cost: number;
-  product_id: {
-    _id: string;
-    product_name: string;
-  };
-}
-
-interface Vendor {
-  _id: string;
-  company_name: string;
-  company_address: string;
-  mobile_no: string;
-  mail: string;
+// TypeScript interface for misc item
+interface MiscItem {
+  itemName: string;
+  specifications: {
+    parameter: string;
+    specification: string;
+  }[];
 }
 
 interface CreatePurchaseFormProps {
-  onSubmit: (data: PurchaseFormData) => Promise<void>;
   loading?: boolean;
 }
 
-const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({ onSubmit, loading = false }) => {
-  const [formData, setFormData] = useState<PurchaseFormData>({
-    estimatedDate: '',
-    instructions: '',
-    materials: [
-      {
-        materialId: '',
-        materialName: '',
-        unit: '',
-        unitCost: 0,
-        quantity: 1,
-        vendorId: '',
-        vendorName: '',
-        notes: '',
-        criticality: 'Regular', // Default criticality
-        expected_days: 7, // Default expected days
-      }
-    ],
-    documents: [],
+const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
+  loading: initialLoading = false,
+}) => {
+  const [purchaseType, setPurchaseType] = useState<string>("");
+  const [showTypeSelection, setShowTypeSelection] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(initialLoading);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+
+  // State for misc item
+  const [currentMiscItem, setCurrentMiscItem] = useState<MiscItem>({
+    itemName: "",
+    specifications: [{ parameter: "", specification: "" }],
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [materials, setMaterials] = useState<RawMaterial[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loadingData, setLoadingData] = useState<boolean>(false);
-  const [uploadingDocs, setUploadingDocs] = useState<boolean>(false);
+  const router = useRouter();
+  const { user } = useUser();
 
-  // Fetch materials and vendors on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoadingData(true);
-      try {
-        const [materialsResponse, vendorsResponse] = await Promise.all([
-          RawMaterialApis.getAllMaterials(),
-          VendorApis.getAllVendors()
-        ]);
+  // Handle purchase type selection
+  const handleTypeSelection = (type: string) => {
+    setPurchaseType(type);
+    setShowTypeSelection(false);
+  };
 
-        if (materialsResponse.status === 200) {
-          setMaterials(materialsResponse.data);
-        }
-        if (vendorsResponse.status === 200) {
-          setVendors(vendorsResponse.data);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoadingData(false);
-      }
-    };
+  // Handle adding a specification row for misc items
+  const addSpecification = () => {
+    setCurrentMiscItem((prev) => ({
+      ...prev,
+      specifications: [
+        ...prev.specifications,
+        { parameter: "", specification: "" },
+      ],
+    }));
+  };
 
-    fetchData();
-  }, []);
+  // Handle removing a specification row
+  const removeSpecification = (index: number) => {
+    setCurrentMiscItem((prev) => ({
+      ...prev,
+      specifications: prev.specifications.filter((_, i) => i !== index),
+    }));
+  };
 
-  // Update purchase item
-  const updatePurchaseItem = (index: number, field: keyof PurchaseItem, value: string | number): void => {
-    const updatedItems = [...formData.materials];
-    updatedItems[index] = {
-      ...updatedItems[index],
+  // Update specification values
+  const updateSpecification = (
+    index: number,
+    field: keyof { parameter: string; specification: string },
+    value: string
+  ) => {
+    setCurrentMiscItem((prev) => {
+      const newSpecs = [...prev.specifications];
+      newSpecs[index] = { ...newSpecs[index], [field]: value };
+      return { ...prev, specifications: newSpecs };
+    });
+  };
+
+  // Update misc item field
+  const updateMiscItem = (field: keyof MiscItem, value: string | any) => {
+    setCurrentMiscItem((prev) => ({
+      ...prev,
       [field]: value,
-    };
-
-    // If materialId is changing, update materialName, unit, and unitCost
-    if (field === 'materialId') {
-      const selectedMaterial = materials.find(m => m._id === value);
-      if (selectedMaterial) {
-        updatedItems[index].materialName = selectedMaterial.material_name;
-        updatedItems[index].unit = selectedMaterial.unit;
-        updatedItems[index].unitCost = selectedMaterial.unit_cost;
-      }
-    }
-
-    // If vendorId is changing, update vendorName
-    if (field === 'vendorId') {
-      const selectedVendor = vendors.find(v => v._id === value);
-      if (selectedVendor) {
-        updatedItems[index].vendorName = selectedVendor.company_name; // Changed from name to company_name
-      }
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      materials: updatedItems,
-    }));
-
-    // Clear error for this field
-    if (errors[`materials.${index}.${field}`]) {
-      setErrors(prev => ({ ...prev, [`materials.${index}.${field}`]: '' }));
-    }
-  };
-
-  // Add new purchase item
-  const addPurchaseItem = (): void => {
-    setFormData(prev => ({
-      ...prev,
-      materials: [
-        ...prev.materials,
-        {
-          materialId: '',
-          materialName: '',
-          unit: '',
-          unitCost: 0,
-          quantity: 1,
-          vendorId: '',
-          vendorName: '',
-          notes: '',
-          criticality: 'Regular', // Default criticality
-          expected_days: 7, // Default expected days
-        }
-      ]
     }));
   };
 
-  // Remove purchase item
-  const removePurchaseItem = (index: number): void => {
-    if (formData.materials.length > 1) {
-      const updatedItems = formData.materials.filter((_, i) => i !== index);
-      setFormData(prev => ({
-        ...prev,
-        materials: updatedItems,
-      }));
-    }
-  };
-
-  // Handle file upload
-  const handleFileUpload = async (file: File, description: string): Promise<string | null> => {
-    const formDataUpload = new FormData();
-    formDataUpload.append("file", file);
-    formDataUpload.append("description", description);
-
-    try {
-      const token = getCookie("token");
-      const response = await fetch(
-        "http://localhost:8001/api/documents/upload",
-        {
-          method: "POST",
-          body: formDataUpload,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status !== 201) {
-        throw new Error("Failed to upload document");
-      }
-
-      const data = await response.json();
-      return data.documentId || data._id; // Adjust based on your API response
-    } catch (error) {
-      console.error("Error uploading document:", error);
-      return null;
-    }
-  };
-
-  // Add document
-  const addDocument = async (file: File, description: string): Promise<void> => {
-    if (!file || !description.trim()) {
-      setErrors(prev => ({ ...prev, document: 'Please select a file and provide description' }));
+  // Handle misc form submission
+  const handleMiscSubmit = async () => {
+    if (!currentMiscItem.itemName) {
+      setError("Item name is required");
       return;
     }
 
-    setUploadingDocs(true);
+    setLoading(true);
+    setError("");
+
     try {
-      const documentId = await handleFileUpload(file, description);
-      if (documentId) {
-        setFormData(prev => ({
-          ...prev,
-          documents: [
-            ...prev.documents,
-            {
-              documentId,
-              file,
-              description,
-            }
-          ]
-        }));
-        setErrors(prev => ({ ...prev, document: '' }));
+      // Format specifications array for API
+      const formattedSpecs = currentMiscItem.specifications.map((spec) => ({
+        param: spec.parameter,
+        specificationValue: spec.specification,
+      }));
+
+      // Prepare data for API
+      const purchaseData = {
+        purchaseRequestType: PURCHASE_TYPES.MISC,
+        itemName: currentMiscItem.itemName,
+        specifications: formattedSpecs,
+        org_id: user?.organizationId || "",
+      };
+
+      // Call API to create purchase requirement
+      const response = await PurchaseReqApis.createPurchaseRequirement(
+        purchaseData
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        setSuccess("Misc purchase requirement created successfully!");
+        // Redirect after a delay
+        setTimeout(() => {
+          router.push("/dashboard/purchases");
+        }, 2000);
       } else {
-        setErrors(prev => ({ ...prev, document: 'Failed to upload document' }));
+        throw new Error(
+          response.data?.message || "Failed to create misc purchase requirement"
+        );
       }
-    } catch (error) {
-      setErrors(prev => ({ ...prev, document: 'Error uploading document' }));
+    } catch (error: any) {
+      console.error("Error creating misc purchase:", error);
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "An error occurred while creating the misc purchase. Please try again."
+      );
     } finally {
-      setUploadingDocs(false);
+      setLoading(false);
     }
   };
 
-  // Remove document
-  const removeDocument = (index: number): void => {
-    const updatedDocuments = formData.documents.filter((_, i) => i !== index);
-    setFormData(prev => ({
-      ...prev,
-      documents: updatedDocuments,
-    }));
-  };
-
-  // Validation
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    // Date validation
-    if (!formData.estimatedDate) {
-      newErrors['estimatedDate'] = 'Estimated date is required';
-    } else if (new Date(formData.estimatedDate) <= new Date()) {
-      newErrors['estimatedDate'] = 'Estimated date must be in the future';
+  // Handle materials form submission
+  const handleMaterialsSubmit = async (data: {
+    materials: Array<{ materialId: string; quantity: number }>;
+  }) => {
+    if (data.materials.length === 0) {
+      setError("Please add at least one material");
+      return;
     }
 
-    // Materials validation
-    formData.materials.forEach((item, index) => {
-      if (!item.materialId) {
-        newErrors[`materials.${index}.materialId`] = 'Please select a material';
-      }
-      if (!item.vendorId) {
-        newErrors[`materials.${index}.vendorId`] = 'Please select a vendor';
-      }
-      if (item.quantity <= 0) {
-        newErrors[`materials.${index}.quantity`] = 'Quantity must be greater than 0';
-      }
-      if (item.expected_days <= 0) {
-        newErrors[`materials.${index}.expected_days`] = 'Expected days must be greater than 0';
-      }
-    });
+    setLoading(true);
+    setError("");
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    
-    if (validateForm()) {
-      // Format data for API
-      const submitData: PurchaseFormData = {
-        ...formData,
-        materials: formData.materials.map(item => ({
+    try {
+      // Prepare data for API
+      const purchaseData = {
+        purchaseRequestType: PURCHASE_TYPES.MATERIALS,
+        materials: data.materials.map((item) => ({
           materialId: item.materialId,
           quantity: item.quantity,
-          vendorId: item.vendorId,
-          notes: item.notes,
-          criticality: item.criticality,
-          expected_days: item.expected_days,
-          // Remove display fields
-          materialName: item.materialName,
-          unit: item.unit,
-          unitCost: item.unitCost,
-          vendorName: item.vendorName,
-        }))
+        })),
+        org_id: user?.organizationId || "",
       };
-      
-      await onSubmit(submitData);
+
+      // Call API to create purchase requirement
+      const response = await PurchaseReqApis.createPurchaseRequirement(
+        purchaseData
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        setSuccess("Material purchase requirement created successfully!");
+        // Redirect after a delay
+        setTimeout(() => {
+          router.push("/dashboard/purchases");
+        }, 2000);
+      } else {
+        throw new Error(
+          response.data?.message ||
+            "Failed to create material purchase requirement"
+        );
+      }
+    } catch (error: any) {
+      console.error("Error creating material purchase:", error);
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "An error occurred while creating the material purchase. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8">
-      {/* Purchase Details */}
+  // Handle machinery form submission
+  const handleMachinerySubmit = async (machineryData: MachineryFormData) => {
+    setLoading(true);
+    setError("");
+
+    try {
+      // First create the machinery record
+      const machineryResponse = await MachineryApis.createMachinery({
+        ...machineryData,
+        org_id: user?.organizationId || "",
+      });
+
+      if (
+        machineryResponse.status !== 200 &&
+        machineryResponse.status !== 201
+      ) {
+        throw new Error(
+          machineryResponse.data?.message || "Failed to create machinery record"
+        );
+      }
+
+      // Get the machinery ID from the response
+      const machineryId = machineryResponse.data.machinery._id;
+
+      if (!machineryId) {
+        throw new Error("No machinery ID returned from server");
+      }
+
+      // Create a purchase requirement with the machinery ID
+      const purchaseData = {
+        purchaseRequestType: PURCHASE_TYPES.MACHINERY,
+        machineryId,
+        org_id: user?.organizationId || "",
+      };
+
+      // Call API to create purchase requirement
+      const purchaseResponse = await PurchaseReqApis.createPurchaseRequirement(
+        purchaseData
+      );
+
+      if (purchaseResponse.status === 200 || purchaseResponse.status === 201) {
+        setSuccess("Machinery purchase requirement created successfully!");
+        // Redirect after a delay
+        setTimeout(() => {
+          router.push("/dashboard/purchases");
+        }, 2000);
+      } else {
+        throw new Error(
+          purchaseResponse.data?.message ||
+            "Failed to create machinery purchase requirement"
+        );
+      }
+    } catch (error: any) {
+      console.error("Error creating machinery purchase:", error);
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "An error occurred while creating the machinery purchase. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // If showing type selection
+  if (showTypeSelection) {
+    return (
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Purchase Requirement Details</h3>
-        <div className="grid grid-cols-1 gap-4">
-          <InputField
-            label="Estimated Delivery Date"
-            type="date"
-            value={formData.estimatedDate}
-            onChange={(e) => setFormData(prev => ({ ...prev, estimatedDate: e.target.value }))}
-            required
-            error={errors['estimatedDate']}
-          />
-          <div>
+        <h2 className="text-xl font-semibold mb-6 text-gray-800">
+          What would you like to purchase?
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Object.values(PURCHASE_TYPES).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => handleTypeSelection(type)}
+              className="flex flex-col items-center justify-center p-6 border-2 border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-500 transition-all"
+            >
+              {/* Icon based on type */}
+              <div className="w-16 h-16 flex items-center justify-center bg-blue-100 rounded-full mb-3">
+                {type === PURCHASE_TYPES.MATERIALS && (
+                  <svg
+                    className="w-8 h-8 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"
+                    />
+                  </svg>
+                )}
+                {type === PURCHASE_TYPES.MACHINERY && (
+                  <svg
+                    className="w-8 h-8 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                )}
+                {type === PURCHASE_TYPES.MISC && (
+                  <svg
+                    className="w-8 h-8 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                    />
+                  </svg>
+                )}
+              </div>
+              <span className="text-lg font-medium text-gray-800">{type}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Header with success/error messages */}
+      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">
+            {purchaseType} Purchase Request
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowTypeSelection(true)}
+            className="text-blue-600 hover:text-blue-800 flex items-center"
+          >
+            <svg
+              className="w-4 h-4 mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
+              />
+            </svg>
+            Change Type
+          </button>
+        </div>
+
+        {/* Success Message */}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center">
+              <svg
+                className="w-5 h-5 text-green-600 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              <p className="text-green-800 font-medium">{success}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <svg
+                className="w-5 h-5 text-red-600 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="text-red-800 font-medium">{error}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Machinery Form */}
+      {purchaseType === PURCHASE_TYPES.MACHINERY && (
+        <MachineryForm onSubmit={handleMachinerySubmit} loading={loading} />
+      )}
+
+      {/* Materials Form */}
+      {purchaseType === PURCHASE_TYPES.MATERIALS && (
+        <MaterialsForm onSubmit={handleMaterialsSubmit} loading={loading} />
+      )}
+
+      {/* Misc Form */}
+      {purchaseType === PURCHASE_TYPES.MISC && (
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-medium mb-3 text-gray-700">
+            Item Details
+          </h3>
+
+          <div className="mb-4">
             <label className="block text-sm font-medium mb-2 text-gray-700">
-              Special Instructions
+              Item Name*
             </label>
-            <textarea
-              value={formData.instructions}
-              onChange={(e) => setFormData(prev => ({ ...prev, instructions: e.target.value }))}
-              placeholder="Enter any special instructions for the purchase"
-              rows={3}
+            <input
+              type="text"
+              value={currentMiscItem.itemName}
+              onChange={(e) => updateMiscItem("itemName", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
             />
           </div>
-        </div>
-      </div>
 
-      {/* Materials Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Materials Required</h3>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addPurchaseItem}
-            className="text-sm"
-          >
-            + Add Material
-          </Button>
-        </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Specifications
+            </label>
 
-        {loadingData ? (
-          <div className="flex justify-center items-center p-6">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-            <span className="ml-2 text-gray-600">Loading materials and vendors...</span>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {formData.materials.map((item, index) => (
-              <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                <div className="flex justify-between items-center mb-3">
-                  <h4 className="text-md font-medium text-gray-800">Material {index + 1}</h4>
-                  {formData.materials.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="danger"
-                      onClick={() => removePurchaseItem(index)}
-                      className="text-xs px-2 py-1"
+            {currentMiscItem.specifications.map((spec, idx) => (
+              <div key={idx} className="flex items-center space-x-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Parameter"
+                  value={spec.parameter}
+                  onChange={(e) =>
+                    updateSpecification(idx, "parameter", e.target.value)
+                  }
+                  className="flex-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Specification"
+                  value={spec.specification}
+                  onChange={(e) =>
+                    updateSpecification(idx, "specification", e.target.value)
+                  }
+                  className="flex-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+
+                {idx > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => removeSpecification(idx)}
+                    className="p-2 text-red-500 hover:text-red-700"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      Remove
-                    </Button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Material Selection */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Material <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      value={item.materialId}
-                      onChange={(e) => updatePurchaseItem(index, 'materialId', e.target.value)}
-                      className={`w-full px-3 py-2 border ${
-                        errors[`materials.${index}.materialId`] ? 'border-red-500' : 'border-gray-300'
-                      } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      required
-                    >
-                      <option value="">Select a material</option>
-                      {materials.map((material) => (
-                        <option key={material._id} value={material._id}>
-                          {material.material_name} ({material.product_id?.product_name || 'No product'})
-                        </option>
-                      ))}
-                    </select>
-                    {errors[`materials.${index}.materialId`] && (
-                      <p className="mt-1 text-sm text-red-600">{errors[`materials.${index}.materialId`]}</p>
-                    )}
-                  </div>
-
-                  {/* Vendor Selection */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Vendor <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      value={item.vendorId}
-                      onChange={(e) => updatePurchaseItem(index, 'vendorId', e.target.value)}
-                      className={`w-full px-3 py-2 border ${
-                        errors[`materials.${index}.vendorId`] ? 'border-red-500' : 'border-gray-300'
-                      } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      required
-                    >
-                      <option value="">Select a vendor</option>
-                      {vendors.map((vendor) => (
-                        <option key={vendor._id} value={vendor._id}>
-                          {vendor.company_name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors[`materials.${index}.vendorId`] && (
-                      <p className="mt-1 text-sm text-red-600">{errors[`materials.${index}.vendorId`]}</p>
-                    )}
-                  </div>
-
-                  {/* Quantity */}
-                  <div>
-                    <InputField
-                      label="Quantity"
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updatePurchaseItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                      placeholder="1"
-                      min="1"
-                      required
-                      error={errors[`materials.${index}.quantity`]}
-                    />
-                  </div>
-
-                  {/* Criticality Selection */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Criticality <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      value={item.criticality}
-                      onChange={(e) => updatePurchaseItem(index, 'criticality', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="Critical">Critical</option>
-                      <option value="Moderate">Moderate</option>
-                      <option value="Regular">Regular</option>
-                    </select>
-                  </div>
-
-                  {/* Expected Days */}
-                  <div>
-                    <InputField
-                      label="Expected Delivery Days"
-                      type="number"
-                      value={item.expected_days}
-                      onChange={(e) => updatePurchaseItem(index, 'expected_days', parseInt(e.target.value) || 0)}
-                      placeholder="7"
-                      min="1"
-                      required
-                      error={errors[`materials.${index}.expected_days`]}
-                    />
-                  </div>
-
-                  {/* Notes */}
-                  <div className="lg:col-span-3">
-                    <label className="block text-sm font-medium mb-2 text-gray-700">
-                      Notes
-                    </label>
-                    <textarea
-                      value={item.notes}
-                      onChange={(e) => updatePurchaseItem(index, 'notes', e.target.value)}
-                      placeholder="Additional notes for this material"
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
               </div>
             ))}
-          </div>
-        )}
-      </div>
 
-      {/* Documents Section */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Documents</h3>
-        
-        {/* Upload Document */}
-        <div className="mb-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-          <h4 className="text-md font-medium text-gray-800 mb-3">Upload Document</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">
-                Document File
-              </label>
-              <input
-                type="file"
-                id="documentFile"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              />
-            </div>
-            <div>
-              <InputField
-                label="Description"
-                placeholder="Document description"
-                id="documentDescription"
-              />
-            </div>
+            <button
+              type="button"
+              onClick={addSpecification}
+              className="mt-2 flex items-center text-blue-600 hover:text-blue-800"
+            >
+              <svg
+                className="w-4 h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              Add Specification
+            </button>
           </div>
-          <div className="mt-3">
+
+          {/* Submit button for Misc */}
+          <div className="flex justify-end mt-6">
             <Button
               type="button"
-              variant="outline"
-              disabled={uploadingDocs}
-              onClick={() => {
-                const fileInput = document.getElementById('documentFile') as HTMLInputElement;
-                const descInput = document.getElementById('documentDescription') as HTMLInputElement;
-                
-                if (fileInput.files?.[0] && descInput.value.trim()) {
-                  addDocument(fileInput.files[0], descInput.value.trim());
-                  fileInput.value = '';
-                  descInput.value = '';
-                }
-              }}
-              className="text-sm"
+              variant="primary"
+              onClick={handleMiscSubmit}
+              disabled={loading || !currentMiscItem.itemName}
+              className="min-w-32"
             >
-              {uploadingDocs ? 'Uploading...' : 'Upload Document'}
+              {loading ? "Submitting..." : "Submit Purchase Request"}
             </Button>
-            {errors['document'] && (
-              <p className="mt-1 text-sm text-red-600">{errors['document']}</p>
-            )}
           </div>
         </div>
+      )}
 
-        {/* Document List */}
-        {formData.documents.length > 0 && (
-          <div>
-            <h4 className="text-md font-medium text-gray-800 mb-3">Uploaded Documents</h4>
-            <div className="space-y-2">
-              {formData.documents.map((doc, index) => (
-                <div key={index} className="flex justify-between items-center p-3 border border-gray-200 rounded-md">
-                  <div>
-                    <span className="text-sm font-medium text-gray-900">{doc.description}</span>
-                    <span className="text-xs text-gray-500 ml-2">({doc.file?.name})</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    onClick={() => removeDocument(index)}
-                    className="text-xs px-2 py-1"
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </div>
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            <span className="text-gray-700 font-medium">
+              Processing request...
+            </span>
           </div>
-        )}
-      </div>
-
-      {/* Submit Button */}
-      <div className="flex justify-end space-x-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => window.history.back()}
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={loading || uploadingDocs}
-          className="min-w-32"
-        >
-          {loading ? 'Creating...' : 'Create Purchase Requirement'}
-        </Button>
-      </div>
-    </form>
+        </div>
+      )}
+    </div>
   );
 };
 
