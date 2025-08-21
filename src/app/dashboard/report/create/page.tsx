@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 import CustomerApis from '@/actions/Apis/CustomerApis'
 import OrgUserApis from '@/actions/Apis/OrgUserApis'
@@ -222,7 +223,6 @@ const CreateReportPage = () => {
                                     value={formData.description}
                                     onChange={handleInputChange}
                                     type="textarea"
-                                    rows={4}
                                     placeholder="Enter detailed description of the report"
                                 />
                             </div>

@@ -60,6 +60,7 @@ interface TimelineEntry {
 
 interface Purchase {
   _id: string;
+  PurchaseRequest_id: string; // Add this new field
   purchaseRequestType: "Material" | "Machinery" | "Misc";
   materials?: PurchaseMaterial[];
   machineryId?: Machinery;
@@ -88,6 +89,7 @@ const PurchasePlanningPage: React.FC = () => {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [allPurchases, setAllPurchases] = useState<Purchase[]>([]); // Store all purchases for counting
   const [loading, setLoading] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   const router = useRouter();
 
@@ -124,7 +126,7 @@ const PurchasePlanningPage: React.FC = () => {
 
       if (res.status === 200) {
         const allPurchaseData = res.data?.requirements || [];
-        
+
         // Filter based on type
         let filteredPurchases = allPurchaseData;
         if (type !== "all") {
@@ -147,6 +149,29 @@ const PurchasePlanningPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let filtered = allPurchases;
+
+    // Filter by tab
+    if (activeTab !== "all") {
+      filtered = filtered.filter(
+        (purchase) => purchase.purchaseRequestType === activeTab
+      );
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter((purchase) =>
+        purchase.PurchaseRequest_id.toLowerCase().includes(
+          searchTerm.toLowerCase()
+        )
+      );
+    }
+
+    setPurchases(filtered);
+  }, [allPurchases, activeTab, searchTerm]);
+
 
   // Fetch all purchases on component mount to get counts
   useEffect(() => {
@@ -177,7 +202,9 @@ const PurchasePlanningPage: React.FC = () => {
     switch (purchase.purchaseRequestType) {
       case "Material":
         if (purchase.materials && purchase.materials.length > 0) {
-          return `${purchase.materials[0].materialId.material_name} (${purchase.materials.length} item${purchase.materials.length > 1 ? 's' : ''})`;
+          return `${purchase.materials[0].materialId.material_name} (${
+            purchase.materials.length
+          } item${purchase.materials.length > 1 ? "s" : ""})`;
         }
         return "Material Request";
       case "Machinery":
@@ -189,16 +216,19 @@ const PurchasePlanningPage: React.FC = () => {
     }
   };
 
-  const PurchaseCard: React.FC<{ purchase: Purchase; index: number }> = ({ purchase, index }) => (
-    <div 
+  const PurchaseCard: React.FC<{ purchase: Purchase; index: number }> = ({
+    purchase,
+    index,
+  }) => (
+    <div
       className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200 p-6 cursor-pointer"
       onClick={() => handleViewDetails(purchase._id)}
     >
-      {/* Header with Serial Number and Status */}
+      {/* Header with PurchaseRequest_id and Status */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
           <h3 className="text-lg font-semibold text-gray-900">
-            PR-{String(index + 1).padStart(3, '0')}
+            {purchase.PurchaseRequest_id}
           </h3>
         </div>
       </div>
@@ -219,10 +249,10 @@ const PurchasePlanningPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-start">
           <span className="text-sm text-gray-600">Status:</span>
-          <span className="text-sm font-medium text-gray-900">
-            {purchase.status}
+          <span className="text-sm font-medium text-gray-900 text-right max-w-48 truncate">
+          {purchase.status?.charAt(0).toUpperCase() + purchase.status?.slice(1)}
           </span>
         </div>
 
@@ -252,15 +282,25 @@ const PurchasePlanningPage: React.FC = () => {
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-0">
           Purchase Requirements
         </h1>
-        <Button
-          variant="primary"
-          className="w-full md:w-auto"
-          onClick={() => {
-            router.push("/dashboard/purchases/create");
-          }}
-        >
-          + Create Purchase Requirement
-        </Button>
+        <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 w-full md:w-auto">
+          {/* Search Input */}
+          <input
+            type="text"
+            placeholder="Search by ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <Button
+            variant="primary"
+            className="w-full md:w-auto"
+            onClick={() => {
+              router.push("/dashboard/purchases/create");
+            }}
+          >
+            + Create Purchase Requirement
+          </Button>
+        </div>
       </div>
 
       {/* Summary Stats */}
@@ -363,7 +403,11 @@ const PurchasePlanningPage: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {purchases.map((purchase: Purchase, index: number) => (
-              <PurchaseCard key={purchase._id} purchase={purchase} index={index} />
+              <PurchaseCard
+                key={purchase._id}
+                purchase={purchase}
+                index={index}
+              />
             ))}
           </div>
         )}

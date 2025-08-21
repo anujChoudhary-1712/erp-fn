@@ -2,7 +2,7 @@
 // components/ReusableComponents/DocumentUploadModal.tsx
 "use client";
 import React, { useState, useEffect } from "react";
-import { Upload, X, ChevronDown, File, AlertCircle } from "lucide-react";
+import { Upload, X, ChevronDown, AlertCircle } from "lucide-react";
 import { getCookie } from "@/actions/CookieUtils"; // Assuming CookieUtils is accessible
 import InputField from "../ReusableComponents/InputField";
 import Button from "../ReusableComponents/Button";
@@ -10,13 +10,7 @@ import Button from "../ReusableComponents/Button";
 interface DocumentUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUploadSuccess: (documentId: string, documentName?: string, fileName?: string) => void; // Enhanced callback
-  documentCategories: string[];
-  isAddingCategory: boolean;
-  onAddCategory: () => void; // To open add category modal
-  onNewCategoryNameChange: (name: string) => void;
-  onAddCategorySubmit: () => void;
-  newCategoryName: string;
+  onUploadSuccess: (documentId: string, documentName: string, fileName?: string) => void; // Enhanced callback
   uploadType: "msme" | "general"; // To differentiate between MSME and general uploads
 }
 
@@ -35,21 +29,30 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   isOpen,
   onClose,
   onUploadSuccess,
-  documentCategories,
-  isAddingCategory,
-  onAddCategory,
-  onNewCategoryNameChange,
-  onAddCategorySubmit,
-  newCategoryName,
   uploadType = "general",
 }) => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [documentName, setDocumentName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [otherCategory, setOtherCategory] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string>("");
+
+  // Static document categories based on the image
+  const documentCategories = [
+    "Lab Personnel",
+    "Organization",
+    "Management Procedures",
+    "Calibration / Testing Procedures",
+    "Traceability Certificates",
+    "External Standards",
+    "Instruction Manuals",
+    "External ILC / PT Record",
+    "Purchase Records",
+    "Others"
+  ];
 
   useEffect(() => {
     if (!isOpen) {
@@ -58,6 +61,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       setDocumentName("");
       setDescription("");
       setSelectedCategory(null);
+      setOtherCategory("");
       setErrors({});
       setIsUploading(false);
       setApiError("");
@@ -69,6 +73,8 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       setDocumentName(value);
     } else if (field === "description") {
       setDescription(value);
+    } else if (field === "otherCategory") {
+      setOtherCategory(value);
     }
 
     // Clear error when user starts typing
@@ -134,6 +140,8 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
     
     if (!selectedCategory) {
       newErrors.category = "Document category is required.";
+    } else if (selectedCategory === "Others" && !otherCategory.trim()) {
+      newErrors.otherCategory = "Please specify the category.";
     }
     
     setErrors(newErrors);
@@ -215,8 +223,11 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
     formData.append("file", uploadFile!);
     formData.append("docName", documentName.trim());
     formData.append("description", description.trim());
-    if (selectedCategory) {
-      formData.append("docType", selectedCategory);
+    
+    // Use the "Others" input value if that category is selected
+    const finalCategory = selectedCategory === "Others" ? otherCategory.trim() : selectedCategory;
+    if (finalCategory) {
+      formData.append("docType", finalCategory);
     }
 
     setIsUploading(true);
@@ -248,9 +259,12 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       const data = await response.json();
       console.log("Document uploaded successfully:", data);
       
-      // Call success callback with appropriate parameters based on upload type
       if (uploadType === "msme") {
-        onUploadSuccess(data?.document?._id);
+        onUploadSuccess(
+          data?.document?._id, 
+          documentName.trim(), 
+          uploadFile?.name
+        );
       } else {
         onUploadSuccess(
           data?.document?._id, 
@@ -357,17 +371,16 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               <select
                 value={selectedCategory || ""}
                 onChange={(e) => {
-                  if (e.target.value === "add-new-category") {
-                    onAddCategory();
-                    setSelectedCategory(null);
-                  } else {
-                    setSelectedCategory(e.target.value);
-                  }
+                  setSelectedCategory(e.target.value);
                   if (errors.category) {
                     setErrors(prev => ({ ...prev, category: "" }));
                   }
                   if (apiError) {
                     setApiError("");
+                  }
+                  // Clear other category when switching away from "Others"
+                  if (e.target.value !== "Others") {
+                    setOtherCategory("");
                   }
                 }}
                 className={`block w-full px-3 py-2 border rounded-lg appearance-none bg-white pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
@@ -384,9 +397,6 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                     {category}
                   </option>
                 ))}
-                <option value="add-new-category" className="font-bold">
-                  + Add New Category
-                </option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                 <ChevronDown className="w-4 h-4" />
@@ -394,6 +404,19 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             </div>
             {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
           </div>
+
+          {/* Other Category Input (Only shown when "Others" is selected) */}
+          {selectedCategory === "Others" && (
+            <InputField
+              label="Specify Category"
+              value={otherCategory}
+              onChange={(e) => handleInputChange("otherCategory", e.target.value)}
+              placeholder="Enter custom category..."
+              required
+              error={errors.otherCategory}
+              disabled={isUploading}
+            />
+          )}
 
           {/* Description */}
           <div>
@@ -442,57 +465,6 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Add New Category Modal */}
-      {isAddingCategory && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Add New Document Category
-              </h2>
-              <button
-                onClick={onAddCategory}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category Name
-                </label>
-                <InputField
-                  type="text"
-                  value={newCategoryName}
-                  onChange={(e) => onNewCategoryNameChange(e.target.value)}
-                  placeholder="Enter new category name..."
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={onAddCategory}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={onAddCategorySubmit}
-                  disabled={!newCategoryName.trim()}
-                  className="flex-1"
-                >
-                  Add Category
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -60,7 +60,7 @@ const MaterialsPage = () => {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Raw Materials Inventory</h1>
             <p className="text-gray-600 mt-1">Manage your raw material inventory</p>
           </div>
-          <Link 
+          {/* <Link 
             href="/dashboard/inventory/materials/create" 
             className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
@@ -68,7 +68,7 @@ const MaterialsPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
             Add New Material
-          </Link>
+          </Link> */}
         </div>
 
         {/* Error Message */}

@@ -568,7 +568,6 @@ const OrderDetailsPage: React.FC = () => {
                 Production Actions
               </h2>
               <div className="space-y-4">
-                {/* Stock Status Alert */}
                 {hasOutOfStockItems && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                     <div className="flex">
@@ -586,18 +585,16 @@ const OrderDetailsPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Action Buttons */}
                 <div className="space-y-3">
-                  <Button
+                  {/* <Button
                     variant="primary"
                     className="w-full"
                     onClick={moveToProduction}
                     disabled={actionLoading}
                   >
                     {actionLoading ? "Processing..." : "Move to Production"}
-                  </Button>
+                  </Button> */}
                   
-                  {/* Only show Move to Dispatch if all items are in stock */}
                   {allItemsInStock && (
                     <Button
                       variant="success"
@@ -605,7 +602,7 @@ const OrderDetailsPage: React.FC = () => {
                       onClick={moveToDispatch}
                       disabled={actionLoading}
                     >
-                      {actionLoading ? "Processing..." : "Move to Dispatch"}
+                      {actionLoading ? "Processing..." : "Order dispatched"}
                     </Button>
                   )}
                 </div>

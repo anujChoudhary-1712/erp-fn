@@ -9,7 +9,6 @@ import {
   ChevronDown,
   File,
 } from "lucide-react";
-import CategoryApis from "@/actions/Apis/CategoryApis";
 import DocumentCard from "@/components/DocumentCard";
 
 export interface Document {
@@ -27,6 +26,18 @@ export interface Document {
   __v: number;
   docType?: string;
   uploadDate: string;
+  uploaded_by?: {
+    name: string;
+    email: string;
+  };
+  approved_by?: {
+    name: string;
+    email: string;
+  };
+  rejected_by?: {
+    name: string;
+    email: string;
+  };
 }
 
 interface FetchedDocumentObject {
@@ -34,15 +45,6 @@ interface FetchedDocumentObject {
   documents: Document[];
   org_id: string;
   latest_doc_id: string;
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
-}
-
-interface Category {
-  _id: string;
-  type: string;
-  items: string[];
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -63,15 +65,26 @@ const DocumentsPage: React.FC = () => {
   const [documentName, setDocumentName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [otherCategoryName, setOtherCategoryName] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [documentCategories, setDocumentCategories] = useState<string[]>([]);
-  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState<boolean>(false);
-  const [newCategoryName, setNewCategoryName] = useState<string>("");
-  const [documentCategoryObject, setDocumentCategoryObject] = useState<Category | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Static document categories based on the image
+  const documentCategories = [
+    "Lab Personnel",
+    "Organization",
+    "Management Procedures",
+    "Calibration / Testing Procedures",
+    "Traceability Certificates",
+    "External Standards",
+    "Instruction Manuals",
+    "External ILC / PT Record",
+    "Purchase Records",
+    "Others"
+  ];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -95,8 +108,16 @@ const DocumentsPage: React.FC = () => {
     formData.append("file", file);
     formData.append("docName", name);
     formData.append("description", desc);
+    
+    // If category is "Others", use the custom category name
     if (category) {
-      formData.append("docType", category);
+      if (category === "Others") {
+        if (otherCategoryName.trim()) {
+          formData.append("docType", otherCategoryName.trim());
+        }
+      } else {
+        formData.append("docType", category);
+      }
     }
 
     try {
@@ -135,8 +156,16 @@ const DocumentsPage: React.FC = () => {
     }
     formData.append("docName", name);
     formData.append("description", desc);
+    
+    // If category is "Others", use the custom category name
     if (category) {
-      formData.append("docType", category);
+      if (category === "Others") {
+        if (otherCategoryName.trim()) {
+          formData.append("docType", otherCategoryName.trim());
+        }
+      } else {
+        formData.append("docType", category);
+      }
     }
 
     try {
@@ -177,110 +206,58 @@ const DocumentsPage: React.FC = () => {
 
   const fetchDocuments = async (): Promise<void> => {
     try {
-      setIsLoading(true);
-      const res = await DocumentApis.getAllDocuments();
-      if (res.status === 200) {
-        const fetchedActiveDocuments: Document[] = [];
-        const fetchedObsoleteDocuments: Document[] = [];
-
-        res.data.forEach((obj: FetchedDocumentObject) => {
-          const latestDoc = obj.documents.find((doc) => doc._id === obj.latest_doc_id);
-
-          if (latestDoc) {
-            fetchedActiveDocuments.push({
-              ...latestDoc,
-              outerId: obj._id,
-              description: latestDoc.description || "No description provided.",
-              docType: latestDoc.docType || "Uncategorized",
-              status: latestDoc.status || "uploaded",
-            });
-          }
-
-          obj.documents.forEach((doc) => {
-            if (doc._id !== obj.latest_doc_id) {
-              fetchedObsoleteDocuments.push({
-                ...doc,
-                outerId: obj._id,
-                description: doc.description || "No description provided (Obsolete).",
-                docType: doc.docType || "Uncategorized",
-                status: doc.status || "obsolete",
-              });
-            }
-          });
-        });
-
-        setActiveDocuments(fetchedActiveDocuments);
-        setObsoleteDocuments(fetchedObsoleteDocuments);
-        console.log("Active Documents:", fetchedActiveDocuments);
-        console.log("Obsolete Documents:", fetchedObsoleteDocuments);
-      }
-    } catch (error) {
-      console.error("Error fetching documents:", error);
-      alert("Failed to fetch documents. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchDocumentCategories = async (): Promise<void> => {
-    try {
-      const res = await CategoryApis.getAllCategories();
-      if (res.status === 200) {
-        const docCategory = res.data.find((cat: Category) => cat.type === "Document-Category");
-        if (docCategory) {
-          setDocumentCategories(docCategory.items);
-          setDocumentCategoryObject(docCategory);
-        } else {
-          setDocumentCategories([]);
-          setDocumentCategoryObject(null);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      setDocumentCategories([]);
-      setDocumentCategoryObject(null);
-    }
-  };
-
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) {
-      alert("Category name cannot be empty.");
-      return;
-    }
-
-    try {
-      if (documentCategoryObject) {
-        const updatedItems = [...documentCategoryObject.items, newCategoryName.trim()];
-        const res = await CategoryApis.updateCategories(documentCategoryObject._id, {
-          items: updatedItems,
-        });
+        setIsLoading(true);
+        const res = await DocumentApis.getAllDocuments();
         if (res.status === 200) {
-          alert(`Category "${newCategoryName}" added successfully!`);
-          await fetchDocumentCategories();
-          setNewCategoryName("");
-          setIsAddCategoryModalOpen(false);
+            const fetchedActiveDocuments: Document[] = [];
+            const fetchedObsoleteDocuments: Document[] = [];
+
+            res.data.forEach((obj: FetchedDocumentObject) => {
+                // Filter out documents with "invoice" in their docName
+                const filteredDocuments = obj.documents.filter(doc =>
+                    !doc.docName.toLowerCase().includes("invoice") && !doc.docName.toLowerCase().includes("attendance")
+                );
+
+                const latestDoc = filteredDocuments.find((doc) => doc._id === obj.latest_doc_id);
+
+                if (latestDoc) {
+                    fetchedActiveDocuments.push({
+                        ...latestDoc,
+                        outerId: obj._id,
+                        description: latestDoc.description || "No description provided.",
+                        docType: latestDoc.docType || "Uncategorized",
+                        status: latestDoc.status || "uploaded",
+                    });
+                }
+
+                filteredDocuments.forEach((doc) => {
+                    if (doc._id !== obj.latest_doc_id) {
+                        fetchedObsoleteDocuments.push({
+                            ...doc,
+                            outerId: obj._id,
+                            description: doc.description || "No description provided (Obsolete).",
+                            docType: doc.docType || "Uncategorized",
+                            status: doc.status || "obsolete",
+                        });
+                    }
+                });
+            });
+
+            setActiveDocuments(fetchedActiveDocuments);
+            setObsoleteDocuments(fetchedObsoleteDocuments);
+            console.log("Active Documents:", fetchedActiveDocuments);
+            console.log("Obsolete Documents:", fetchedObsoleteDocuments);
         }
-      } else {
-        const res = await CategoryApis.createCategory({
-          type: "Document-Category",
-          items: [newCategoryName.trim()],
-        });
-        if (res.status === 201) {
-          alert(`Category "${newCategoryName}" added successfully!`);
-          await fetchDocumentCategories();
-          setNewCategoryName("");
-          setIsAddCategoryModalOpen(false);
-        }
-      }
     } catch (error) {
-      console.error("Error adding/updating category:", error);
-      alert("Failed to add category. Please try again.");
+        console.error("Error fetching documents:", error);
+        alert("Failed to fetch documents. Please try again.");
+    } finally {
+        setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchDocuments();
-    fetchDocumentCategories();
   }, []);
 
   const openDocumentModal = (mode: ModalMode, doc?: Document) => {
@@ -288,12 +265,29 @@ const DocumentsPage: React.FC = () => {
     setIsModalOpen(true);
     if (mode === "amend" && doc) {
       setEditingDocument(doc);
+      setDocumentName(doc.docName || "");
+      setDescription(doc.description || "");
+      
+      // Check if doc.docType is one of the static categories
+      if (doc.docType) {
+        if (documentCategories.includes(doc.docType)) {
+          setSelectedCategory(doc.docType);
+          setOtherCategoryName("");
+        } else {
+          setSelectedCategory("Others");
+          setOtherCategoryName(doc.docType);
+        }
+      } else {
+        setSelectedCategory(null);
+        setOtherCategoryName("");
+      }
     } else {
       setEditingDocument(null);
+      setDocumentName("");
+      setDescription("");
+      setSelectedCategory(null);
+      setOtherCategoryName("");
     }
-    setDocumentName("");
-    setDescription("");
-    setSelectedCategory(null);
     setUploadFile(null);
   };
 
@@ -304,12 +298,23 @@ const DocumentsPage: React.FC = () => {
     setDocumentName("");
     setDescription("");
     setSelectedCategory(null);
+    setOtherCategoryName("");
     setUploadFile(null);
   };
 
   const handleSubmitDocument = (): void => {
-    if (!documentName.trim() || !selectedCategory) {
-      alert("Please enter a document name and choose a category.");
+    if (!documentName.trim()) {
+      alert("Please enter a document name.");
+      return;
+    }
+
+    if (!selectedCategory) {
+      alert("Please choose a category.");
+      return;
+    }
+
+    if (selectedCategory === "Others" && !otherCategoryName.trim()) {
+      alert("Please specify a category name.");
       return;
     }
 
@@ -521,11 +526,10 @@ const DocumentsPage: React.FC = () => {
                   <select
                     value={selectedCategory || ""}
                     onChange={(e) => {
-                      if (e.target.value === "add-new-category") {
-                        setIsAddCategoryModalOpen(true);
-                        setSelectedCategory(null);
-                      } else {
-                        setSelectedCategory(e.target.value);
+                      setSelectedCategory(e.target.value);
+                      // Clear the other category input if not selecting "Others"
+                      if (e.target.value !== "Others") {
+                        setOtherCategoryName("");
                       }
                     }}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-lg appearance-none bg-white pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -538,15 +542,28 @@ const DocumentsPage: React.FC = () => {
                         {category}
                       </option>
                     ))}
-                    <option value="add-new-category" className="font-bold">
-                      + Add New Category
-                    </option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                     <ChevronDown className="w-4 h-4" />
                   </div>
                 </div>
               </div>
+
+              {/* Other Category Input (Only shown when "Others" is selected) */}
+              {selectedCategory === "Others" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Specify Category
+                  </label>
+                  <input
+                    type="text"
+                    value={otherCategoryName}
+                    onChange={(e) => setOtherCategoryName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter custom category..."
+                  />
+                </div>
+              )}
 
               {/* Description */}
               <div>
@@ -573,6 +590,7 @@ const DocumentsPage: React.FC = () => {
                   disabled={
                     !documentName.trim() ||
                     !selectedCategory ||
+                    (selectedCategory === "Others" && !otherCategoryName.trim()) ||
                     (modalMode === "upload" && !uploadFile) ||
                     isUploading
                   }
@@ -583,50 +601,6 @@ const DocumentsPage: React.FC = () => {
                     : modalMode === "upload"
                     ? "Upload"
                     : "Amend"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add New Category Modal */}
-      {isAddCategoryModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Add New Document Category</h2>
-              <button
-                onClick={() => setIsAddCategoryModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category Name</label>
-                <input
-                  type="text"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter new category name..."
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setIsAddCategoryModalOpen(false)}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddCategory}
-                  disabled={!newCategoryName.trim()}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Add Category
                 </button>
               </div>
             </div>

@@ -1,337 +1,523 @@
-"use client"
-import PurchaseReqApis from '@/actions/Apis/PurchaseReqApis'
-import VendorApis from '@/actions/Apis/VendorApis'
-import Button from '@/components/ReusableComponents/Button'
-import { useSearchParams, useRouter } from 'next/navigation'
-import React, { useEffect, useState } from 'react'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+import PurchaseReqApis from "@/actions/Apis/PurchaseReqApis";
+import VendorApis from "@/actions/Apis/VendorApis";
+import Button from "@/components/ReusableComponents/Button";
+import { useSearchParams, useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
 // TypeScript interfaces
 interface Vendor {
-  _id: string
-  company_name: string
-  status: string
-  state: string
-  city: string
-  contact_person: string
+  _id: string;
+  company_name: string;
+  status: string;
+  state: string;
+  city: string;
+  contact_person: string;
+  approved_for: string;
+}
+
+interface VerificationParameter {
+  parameter: string;
+  specificationValue: string;
+  _id: string;
+}
+
+interface Material {
+  materialId: {
+    _id: string;
+    material_name: string;
+    verificationParameters: VerificationParameter[];
+    [key: string]: any;
+  };
+  quantity: number;
+}
+
+interface SpecificationAvailability {
+  param: string;
+  specification: string;
+  available: boolean;
+}
+
+interface MaterialObservability {
+  materialId: string;
+  param: string;
+  specification: string;
+  observedValue: string;
 }
 
 interface VendorEvaluation {
-  vendorId: string | {
-    _id: string
-    company_name: string
-    [key: string]: any
-  }
-  name: string
-  availability: boolean
-  price: number
-  isRecommended: boolean
-  isSelected?: boolean
+  vendorId:
+    | string
+    | {
+        _id: string;
+        company_name: string;
+        [key: string]: any;
+      };
+  name: string;
+  price: number;
+  isRecommended: boolean;
+  isSelected?: boolean;
+  // For Misc type
+  availabilities?: SpecificationAvailability[];
+  // For Material type
+  observabilities?: MaterialObservability[];
+  // Old availability field for backward compatibility
+  availability?: boolean;
+}
+
+interface MiscSpecification {
+  param: string;
+  specificationValue: string;
 }
 
 const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
-  const searchParams = useSearchParams()
-  const isSelectionMode = searchParams.get('selection') === 'required'
-  
-  const [vendors, setVendors] = useState<Vendor[]>([])
-  const [selectedVendors, setSelectedVendors] = useState<VendorEvaluation[]>([])
+  const searchParams = useSearchParams();
+  const isSelectionMode = searchParams.get("selection") === "required";
+
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [selectedVendors, setSelectedVendors] = useState<VendorEvaluation[]>(
+    []
+  );
   const [currentVendor, setCurrentVendor] = useState<VendorEvaluation>({
-    vendorId: '',
-    name: '',
-    availability: true,
+    vendorId: "",
+    name: "",
     price: 0,
-    isRecommended: false
-  })
-  
-  const [purchaseDetails, setPurchaseDetails] = useState<any>(null)
-  const [loading, setLoading] = useState<boolean>(true)
-  const [submitting, setSubmitting] = useState<boolean>(false)
-  const [error, setError] = useState<string>('')
-  const [success, setSuccess] = useState<string>('')
-  
+    isRecommended: false,
+    availabilities: [], // For Misc type
+    observabilities: [], // For Material type
+  });
+
+  const [purchaseDetails, setPurchaseDetails] = useState<any>(null);
+  const [miscSpecs, setMiscSpecs] = useState<MiscSpecification[]>([]); // State for misc specifications
+  const [loading, setLoading] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+
   // For vendor selection mode
-  const [selectedVendorId, setSelectedVendorId] = useState<string>('')
-  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState<string>('')
-  
-  const router = useRouter()
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
+  const [estimatedDeliveryDate, setEstimatedDeliveryDate] =
+    useState<string>("");
+
+  const router = useRouter();
 
   // Get min date for estimated delivery (today)
   const getMinDate = () => {
-    const today = new Date()
-    return today.toISOString().split('T')[0]
-  }
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
+
+  // Handle specification availability change for Misc type
+  const handleSpecificationAvailabilityChange = (
+    param: string,
+    specification: string,
+    available: boolean
+  ) => {
+    const updatedAvailabilities = [...(currentVendor.availabilities || [])];
+    const existingSpecIndex = updatedAvailabilities.findIndex(
+      (av) => av.param === param && av.specification === specification
+    );
+
+    if (existingSpecIndex > -1) {
+      updatedAvailabilities[existingSpecIndex].available = available;
+    } else {
+      updatedAvailabilities.push({ param, specification, available });
+    }
+
+    setCurrentVendor({
+      ...currentVendor,
+      availabilities: updatedAvailabilities,
+    });
+  };
+
+  // Handle material observability change for Material type
+  const handleMaterialObservabilityChange = (
+    materialId: string,
+    param: string,
+    specification: string,
+    observedValue: string
+  ) => {
+    const updatedObservabilities = [...(currentVendor.observabilities || [])];
+    const existingObsIndex = updatedObservabilities.findIndex(
+      (obs) => 
+        obs.materialId === materialId && 
+        obs.param === param && 
+        obs.specification === specification
+    );
+
+    if (existingObsIndex > -1) {
+      updatedObservabilities[existingObsIndex].observedValue = observedValue;
+    } else {
+      updatedObservabilities.push({ 
+        materialId, 
+        param, 
+        specification, 
+        observedValue 
+      });
+    }
+
+    setCurrentVendor({
+      ...currentVendor,
+      observabilities: updatedObservabilities,
+    });
+  };
 
   // Fetch vendors and purchase details
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
         // Fetch purchase details
-        const purchaseRes = await PurchaseReqApis.getSinglePurchase(params.id)
+        const purchaseRes = await PurchaseReqApis.getSinglePurchase(params.id);
+        let requiredCategory = "";
         if (purchaseRes.status === 200) {
-          setPurchaseDetails(purchaseRes.data.requirement)
-          
+          const requirement = purchaseRes.data.requirement;
+          setPurchaseDetails(requirement);
+
+          requiredCategory =
+            requirement.purchaseRequestType === "Misc"
+              ? "miscellaneous"
+              : requirement.purchaseRequestType.toLowerCase();
+
+          // If it's a Misc type, get specifications
+          if (
+            requirement.purchaseRequestType === "Misc" &&
+            requirement.misc_id?.specifications
+          ) {
+            setMiscSpecs(requirement.misc_id.specifications);
+          }
+
           // If vendors were already evaluated, load them
-          if (purchaseRes.data.requirement.vendorsEvaluated && 
-              purchaseRes.data.requirement.vendorsEvaluated.length > 0) {
-            
+          if (
+            requirement.vendorsEvaluated &&
+            requirement.vendorsEvaluated.length > 0
+          ) {
             // Format the vendorsEvaluated data for our state
-            const formattedVendors = purchaseRes.data.requirement.vendorsEvaluated.map((vendor: any) => {
-              // Handle both object and string vendorId formats
-              const vendorIdValue = typeof vendor.vendorId === 'object' ? vendor.vendorId._id : vendor.vendorId
-              
-              return {
-                vendorId: vendorIdValue,
-                name: vendor.name,
-                availability: vendor.availability,
-                price: vendor.price,
-                isRecommended: vendor.isRecommended,
-                isSelected: vendor.isSelected || false,
-                // Store the original vendor object for display
-                vendorObj: typeof vendor.vendorId === 'object' ? vendor.vendorId : null
+            const formattedVendors = requirement.vendorsEvaluated.map(
+              (vendor: any) => {
+                const vendorIdValue =
+                  typeof vendor.vendorId === "object"
+                    ? vendor.vendorId._id
+                    : vendor.vendorId;
+
+                return {
+                  vendorId: vendorIdValue,
+                  name: vendor.name,
+                  // Handle all field types
+                  availability: vendor.availability,
+                  availabilities: vendor.availabilities,
+                  observabilities: vendor.observabilities,
+                  price: vendor.price,
+                  isRecommended: vendor.isRecommended,
+                  isSelected: vendor.isSelected || false,
+                  vendorObj:
+                    typeof vendor.vendorId === "object"
+                      ? vendor.vendorId
+                      : null,
+                };
               }
-            })
-            
-            setSelectedVendors(formattedVendors)
-            
+            );
+
+            setSelectedVendors(formattedVendors);
+
             // Set recommended vendor as selected by default in selection mode
             if (isSelectionMode) {
-              const recommendedVendor = formattedVendors.find(v => v.isRecommended)
+              const recommendedVendor = formattedVendors.find(
+                (v: { isRecommended: any }) => v.isRecommended
+              );
               if (recommendedVendor) {
-                setSelectedVendorId(recommendedVendor.vendorId as string)
+                setSelectedVendorId(recommendedVendor.vendorId as string);
               }
             }
           }
         } else {
-          setError("Failed to fetch purchase details")
+          setError("Failed to fetch purchase details");
         }
 
         // Only fetch vendors if not in selection mode
         if (!isSelectionMode) {
-          const vendorsRes = await VendorApis.getAllVendors()
+          const vendorsRes = await VendorApis.getAllVendors();
           if (vendorsRes.status === 200) {
             // Filter vendors with "approved" status
-            const approvedVendors = vendorsRes.data.filter((vendor: Vendor) => 
-              vendor.status.toLowerCase() === 'approved'
-            )
-            setVendors(approvedVendors)
+            const approvedVendors = vendorsRes.data.filter(
+              (vendor: Vendor) =>
+                vendor.status.toLowerCase() === "approved" &&
+                vendor.approved_for.toLowerCase() === requiredCategory
+            );
+            setVendors(approvedVendors);
           } else {
-            setError("Failed to fetch vendors")
+            setError("Failed to fetch vendors");
           }
         }
       } catch (error) {
-        console.error("Error fetching data:", error)
-        setError("An error occurred while fetching data")
+        console.error("Error fetching data:", error);
+        setError("An error occurred while fetching data");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [params.id, isSelectionMode])
+    fetchData();
+  }, [params.id, isSelectionMode]);
 
   // Handle vendor selection
   const handleVendorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const vendorId = e.target.value
-    if (!vendorId) return
+    const vendorId = e.target.value;
+    if (!vendorId) return;
 
-    const selectedVendor = vendors.find(v => v._id === vendorId)
+    const selectedVendor = vendors.find((v) => v._id === vendorId);
     if (selectedVendor) {
+      let initialAvailabilities: SpecificationAvailability[] = [];
+      let initialObservabilities: MaterialObservability[] = [];
+
+      // For Misc type, initialize availabilities
+      if (purchaseDetails?.purchaseRequestType === "Misc" && miscSpecs.length > 0) {
+        initialAvailabilities = miscSpecs.map((s) => ({
+          param: s.param,
+          specification: s.specificationValue,
+          available: true, // Default to available
+        }));
+      }
+      
+      // For Material type, initialize empty observabilities for each material parameter
+      if (purchaseDetails?.purchaseRequestType === "Material" && 
+          purchaseDetails.materials && 
+          purchaseDetails.materials.length > 0) {
+        // Each material may have multiple verification parameters
+        initialObservabilities = purchaseDetails.materials.flatMap((material: Material) => {
+          if (material.materialId.verificationParameters && 
+              material.materialId.verificationParameters.length > 0) {
+            return material.materialId.verificationParameters.map((param: VerificationParameter) => ({
+              materialId: material.materialId._id,
+              param: param.parameter,
+              specification: param.specificationValue,
+              observedValue: "", // Initialize with empty string
+            }));
+          }
+          return [];
+        });
+      }
+
       setCurrentVendor({
         vendorId: selectedVendor._id,
         name: selectedVendor.company_name,
-        availability: true,
         price: 0,
-        isRecommended: false
-      })
+        isRecommended: false,
+        availabilities: initialAvailabilities,
+        observabilities: initialObservabilities,
+      });
     }
-  }
-
-  // Handle availability change
-  const handleAvailabilityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCurrentVendor({
-      ...currentVendor,
-      availability: e.target.value === 'yes'
-    })
-  }
+  };
 
   // Handle price change
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const price = parseFloat(e.target.value) || 0
+    const price = parseFloat(e.target.value) || 0;
     setCurrentVendor({
       ...currentVendor,
-      price: price
-    })
-  }
+      price: price,
+    });
+  };
 
   // Handle recommendation change
-  const handleRecommendationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const isRecommended = e.target.checked
-    
+  const handleRecommendationChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const isRecommended = e.target.checked;
+
     setCurrentVendor({
       ...currentVendor,
-      isRecommended
-    })
-  }
+      isRecommended,
+    });
+  };
 
   // Add vendor to the list
   const addVendor = () => {
     // Validate form
     if (!currentVendor.vendorId) {
-      setError("Please select a vendor")
-      return
+      setError("Please select a vendor");
+      return;
     }
 
     if (currentVendor.price <= 0) {
-      setError("Please enter a valid price")
-      return
+      setError("Please enter a valid price");
+      return;
     }
 
     // Check if vendor already exists in the list
-    if (selectedVendors.some(v => v.vendorId === currentVendor.vendorId)) {
-      setError("This vendor is already added to the evaluation list")
-      return
+    if (selectedVendors.some((v) => v.vendorId === currentVendor.vendorId)) {
+      setError("This vendor is already added to the evaluation list");
+      return;
     }
 
-    let updatedVendors = [...selectedVendors]
-    
+    let updatedVendors = [...selectedVendors];
+
     // If current vendor is recommended, unset recommendation for all others
     if (currentVendor.isRecommended) {
-      updatedVendors = updatedVendors.map(vendor => ({
+      updatedVendors = updatedVendors.map((vendor) => ({
         ...vendor,
-        isRecommended: false
-      }))
+        isRecommended: false,
+      }));
     }
-    
+
     // Add the new vendor
-    updatedVendors.push(currentVendor)
-    setSelectedVendors(updatedVendors)
-    
+    updatedVendors.push(currentVendor);
+    setSelectedVendors(updatedVendors);
+
     // Reset current vendor form
     setCurrentVendor({
-      vendorId: '',
-      name: '',
-      availability: true,
+      vendorId: "",
+      name: "",
       price: 0,
-      isRecommended: false
-    })
-    
+      isRecommended: false,
+      availabilities: [], // Reset availabilities
+      observabilities: [], // Reset observabilities
+    });
+
     // Clear any error
-    setError('')
-  }
+    setError("");
+  };
 
   // Remove vendor from the list
   const removeVendor = (index: number) => {
-    const updatedVendors = [...selectedVendors]
-    updatedVendors.splice(index, 1)
-    setSelectedVendors(updatedVendors)
-  }
+    const updatedVendors = [...selectedVendors];
+    updatedVendors.splice(index, 1);
+    setSelectedVendors(updatedVendors);
+  };
 
   // Toggle recommendation for a vendor in the list
   const toggleRecommendation = (index: number) => {
-    const updatedVendors = [...selectedVendors]
-    
+    const updatedVendors = [...selectedVendors];
+
     // If toggling to recommended, unset recommendation for all others
     if (!updatedVendors[index].isRecommended) {
       updatedVendors.forEach((vendor, i) => {
         if (i !== index) {
-          vendor.isRecommended = false
+          vendor.isRecommended = false;
         }
-      })
-      updatedVendors[index].isRecommended = true
+      });
+      updatedVendors[index].isRecommended = true;
     } else {
       // If toggling off recommendation, just update that vendor
-      updatedVendors[index].isRecommended = false
+      updatedVendors[index].isRecommended = false;
     }
-    
-    setSelectedVendors(updatedVendors)
-  }
+
+    setSelectedVendors(updatedVendors);
+  };
 
   // Select a vendor (in selection mode)
   const handleVendorSelect = (vendorId: string) => {
-    setSelectedVendorId(vendorId)
-  }
+    setSelectedVendorId(vendorId);
+  };
+
+  // Find material name by ID
+  const getMaterialNameById = (materialId: string): string => {
+    if (!purchaseDetails?.materials) return "Unknown Material";
+    
+    const material = purchaseDetails.materials.find(
+      (m: any) => m.materialId._id === materialId
+    );
+    
+    return material ? material.materialId.material_name : "Unknown Material";
+  };
 
   // Submit vendor evaluations
   const handleVendorEvaluation = async () => {
     if (selectedVendors.length === 0) {
-      setError("Please add at least one vendor to evaluate")
-      return
+      setError("Please add at least one vendor to evaluate");
+      return;
     }
 
-    setSubmitting(true)
-    setError('')
-    setSuccess('')
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
 
     try {
       const payload = {
-        vendors: selectedVendors.map(vendor => ({
-          vendorId: vendor.vendorId,
-          name: vendor.name,
-          availability: vendor.availability,
-          price: vendor.price,
-          isRecommended: vendor.isRecommended
-        }))
-      }
-      
-      const res = await PurchaseReqApis.evaluateVendors(params.id, payload)
-      
+        vendors: selectedVendors.map((vendor) => {
+          const baseVendor = {
+            vendorId: vendor.vendorId,
+            name: vendor.name,
+            price: vendor.price,
+            isRecommended: vendor.isRecommended,
+          };
+
+          // Add type-specific fields
+          if (purchaseDetails?.purchaseRequestType === "Misc") {
+            return {
+              ...baseVendor,
+              availabilities: vendor.availabilities,
+            };
+          } else if (purchaseDetails?.purchaseRequestType === "Material") {
+            return {
+              ...baseVendor,
+              observabilities: vendor.observabilities,
+            };
+          }
+
+          return baseVendor;
+        }),
+      };
+
+      const res = await PurchaseReqApis.evaluateVendors(params.id, payload);
+
       if (res.status === 200) {
-        setSuccess("Vendor evaluation submitted successfully")
+        setSuccess("Vendor evaluation submitted successfully");
         // Redirect after a delay
         setTimeout(() => {
-          router.push(`/dashboard/purchases/${params.id}`)
-        }, 2000)
+          router.push(`/dashboard/purchases/${params.id}`);
+        }, 2000);
       } else {
-        setError("Failed to submit vendor evaluation")
+        setError("Failed to submit vendor evaluation");
       }
     } catch (error) {
-      console.error("Error submitting vendor evaluation:", error)
-      setError("An error occurred while submitting the evaluation")
+      console.error("Error submitting vendor evaluation:", error);
+      setError("An error occurred while submitting the evaluation");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   // Submit vendor selection
   const handleVendorSelection = async () => {
     if (!selectedVendorId) {
-      setError("Please select a vendor")
-      return
+      setError("Please select a vendor");
+      return;
     }
 
     if (!estimatedDeliveryDate) {
-      setError("Please select an estimated delivery date")
-      return
+      setError("Please select an estimated delivery date");
+      return;
     }
 
-    setSubmitting(true)
-    setError('')
-    setSuccess('')
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
 
     try {
       const payload = {
         vendorId: selectedVendorId,
-        estimatedDeliveryDate: new Date(estimatedDeliveryDate).toISOString()
-      }
-      
-      const res = await PurchaseReqApis.selectVendor(params.id, payload)
-      
+        estimatedDeliveryDate: new Date(estimatedDeliveryDate).toISOString(),
+      };
+
+      const res = await PurchaseReqApis.selectVendor(params.id, payload);
+
       if (res.status === 200) {
-        setSuccess("Vendor selected successfully")
+        setSuccess("Vendor selected successfully");
         // Redirect after a delay
         setTimeout(() => {
-          router.push(`/dashboard/purchases/${params.id}`)
-        }, 2000)
+          router.push(`/dashboard/purchases/${params.id}`);
+        }, 2000);
       } else {
-        setError("Failed to select vendor")
+        setError("Failed to select vendor");
       }
     } catch (error) {
-      console.error("Error selecting vendor:", error)
-      setError("An error occurred while selecting the vendor")
+      console.error("Error selecting vendor:", error);
+      setError("An error occurred while selecting the vendor");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -341,7 +527,7 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
           <span className="text-gray-600 font-medium">Loading...</span>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -371,7 +557,7 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
             </button>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                {isSelectionMode ? 'Select Vendor' : 'Vendor Evaluation'}
+                {isSelectionMode ? "Select Vendor" : "Vendor Evaluation"}
               </h1>
               <p className="text-gray-600 mt-1">
                 {purchaseDetails?.purchaseRequestType} Purchase Requirement
@@ -428,11 +614,14 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
           <div className="space-y-6">
             {/* Estimated Delivery Date */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Delivery Details</h2>
-              
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Delivery Details
+              </h2>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estimated Delivery Date <span className="text-red-500">*</span>
+                  Estimated Delivery Date{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -447,64 +636,150 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
 
             {/* Vendor Selection Table */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Select a Vendor</h2>
-              
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Select a Vendor
+              </h2>
+
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
                         Select
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
                         Vendor
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
                         Price (₹)
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Availability
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {purchaseDetails?.purchaseRequestType !== "Machinery" && (
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          {purchaseDetails?.purchaseRequestType === "Misc"
+                            ? "Specifications"
+                            : purchaseDetails?.purchaseRequestType === "Material"
+                            ? "Observations"
+                            : "Availability"}
+                        </th>
+                      )}
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
                         Recommended
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {selectedVendors.map((vendor, index) => (
-                      <tr key={index} className={selectedVendorId === vendor.vendorId ? "bg-blue-50" : ""}>
+                      <tr
+                        key={index}
+                        className={
+                          selectedVendorId === vendor.vendorId
+                            ? "bg-blue-50"
+                            : ""
+                        }
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <input
                               type="radio"
                               name="vendorSelection"
                               checked={selectedVendorId === vendor.vendorId}
-                              onChange={() => handleVendorSelect(vendor.vendorId as string)}
+                              onChange={() =>
+                                handleVendorSelect(vendor.vendorId as string)
+                              }
                               className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                             />
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{vendor.name}</div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {vendor.name}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{vendor.price.toLocaleString()}</div>
+                          <div className="text-sm text-gray-900">
+                            {vendor.price.toLocaleString()}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            vendor.availability 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {vendor.availability ? 'Yes' : 'No'}
-                          </span>
-                        </td>
+                        {purchaseDetails?.purchaseRequestType !== "Machinery" && (
+                          <td className="px-6 py-4">
+                            {purchaseDetails?.purchaseRequestType === "Misc" ? (
+                              <div className="space-y-1">
+                                {vendor.availabilities?.map((av, avIndex) => (
+                                  <div key={avIndex} className="text-sm">
+                                    <span className="font-medium">
+                                      {av.param}:
+                                    </span>{" "}
+                                    {av.specification}
+                                    <span
+                                      className={`ml-2 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                        av.available
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
+                                      {av.available ? "Yes" : "No"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : purchaseDetails?.purchaseRequestType === "Material" ? (
+                              <div className="space-y-1">
+                                {vendor.observabilities?.map((obs, obsIndex) => (
+                                  <div key={obsIndex} className="text-sm">
+                                    <span className="font-medium">
+                                      {getMaterialNameById(obs.materialId)} - {obs.param}:
+                                    </span>{" "}
+                                    {obs.specification}
+                                    <span className="ml-2 text-gray-700">
+                                      Observed: {obs.observedValue || "N/A"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span
+                                className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  vendor.availability
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {vendor.availability ? "Yes" : "No"}
+                              </span>
+                            )}
+                          </td>
+                        )}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             {vendor.isRecommended ? (
                               <span className="text-green-600">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
                                 </svg>
                               </span>
                             ) : (
@@ -525,10 +800,12 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
                 type="button"
                 variant="primary"
                 onClick={handleVendorSelection}
-                disabled={submitting || !selectedVendorId || !estimatedDeliveryDate}
+                disabled={
+                  submitting || !selectedVendorId || !estimatedDeliveryDate
+                }
                 className="min-w-32"
               >
-                {submitting ? 'Processing...' : 'Confirm Selection'}
+                {submitting ? "Processing..." : "Confirm Selection"}
               </Button>
             </div>
           </div>
@@ -537,8 +814,10 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
           <>
             {/* Add Vendor Form */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Add Vendor Evaluation</h2>
-              
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Add Vendor Evaluation
+              </h2>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {/* Vendor Selection */}
                 <div>
@@ -552,17 +831,19 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
                   >
                     <option value="">Select Vendor</option>
                     {vendors.map((vendor) => (
-                      <option 
-                        key={vendor._id} 
+                      <option
+                        key={vendor._id}
                         value={vendor._id}
-                        disabled={selectedVendors.some(v => v.vendorId === vendor._id)}
+                        disabled={selectedVendors.some(
+                          (v) => v.vendorId === vendor._id
+                        )}
                       >
                         {vendor.company_name} ({vendor.city}, {vendor.state})
                       </option>
                     ))}
                   </select>
                 </div>
-                
+
                 {/* Price */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -570,7 +851,7 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
                   </label>
                   <input
                     type="number"
-                    value={currentVendor.price || ''}
+                    value={currentVendor.price || ""}
                     onChange={handlePriceChange}
                     min="0"
                     step="0.01"
@@ -579,25 +860,114 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
                   />
                 </div>
               </div>
-              
+
+              {/* Conditional rendering for type-specific inputs */}
+              {purchaseDetails?.purchaseRequestType === "Misc" &&
+                miscSpecs.length > 0 && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Specification Availability
+                    </label>
+                    <div className="space-y-3">
+                      {miscSpecs.map((spec, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="text-sm text-gray-800">
+                            <span className="font-medium">{spec.param}:</span>{" "}
+                            {spec.specificationValue}
+                          </div>
+                          <select
+                            value={
+                              currentVendor.availabilities?.find(
+                                (av) =>
+                                  av.param === spec.param &&
+                                  av.specification === spec.specificationValue
+                              )?.available
+                                ? "yes"
+                                : "no"
+                            }
+                            onChange={(e) =>
+                              handleSpecificationAvailabilityChange(
+                                spec.param,
+                                spec.specificationValue,
+                                e.target.value === "yes"
+                              )
+                            }
+                            className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="yes">Available</option>
+                            <option value="no">Not Available</option>
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Material Observability Form */}
+              {purchaseDetails?.purchaseRequestType === "Material" &&
+                purchaseDetails.materials &&
+                purchaseDetails.materials.length > 0 && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Material Observations
+                    </label>
+                    <div className="space-y-6">
+                      {purchaseDetails.materials.map((material: Material, materialIndex: number) => (
+                        <div key={materialIndex} className="p-4 border border-gray-200 rounded-lg">
+                          <h3 className="text-md font-medium text-gray-800 mb-2">
+                            {material.materialId.material_name}
+                          </h3>
+                          
+                          {material.materialId.verificationParameters && 
+                           material.materialId.verificationParameters.length > 0 ? (
+                            <div className="space-y-3">
+                              {material.materialId.verificationParameters.map((param: VerificationParameter, paramIndex: number) => (
+                                <div key={paramIndex} className="grid grid-cols-3 gap-4 items-center">
+                                  <div className="col-span-1 text-sm text-gray-800">
+                                    <span className="font-medium">{param.parameter}:</span>{" "}
+                                    {param.specificationValue}
+                                  </div>
+                                  <div className="col-span-2">
+                                    <input
+                                      type="text"
+                                      value={
+                                        currentVendor.observabilities?.find(
+                                          (obs) => 
+                                            obs.materialId === material.materialId._id && 
+                                            obs.param === param.parameter && 
+                                            obs.specification === param.specificationValue
+                                        )?.observedValue || ""
+                                      }
+                                      onChange={(e) => 
+                                        handleMaterialObservabilityChange(
+                                          material.materialId._id,
+                                          param.parameter,
+                                          param.specificationValue,
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                      placeholder="Enter observed value"
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500 italic">No verification parameters found</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* Availability */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Availability
-                  </label>
-                  <select
-                    value={currentVendor.availability ? 'yes' : 'no'}
-                    onChange={handleAvailabilityChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </select>
-                </div>
-                
                 {/* Recommended */}
-                <div className="flex items-center h-full pt-6">
+                <div className="flex items-center h-full">
                   <input
                     type="checkbox"
                     id="recommended"
@@ -605,12 +975,15 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
                     onChange={handleRecommendationChange}
                     className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <label htmlFor="recommended" className="ml-2 block text-sm text-gray-700">
+                  <label
+                    htmlFor="recommended"
+                    className="ml-2 block text-sm text-gray-700"
+                  >
                     Recommended Vendor
                   </label>
                 </div>
               </div>
-              
+
               <div className="flex justify-end">
                 <Button
                   type="button"
@@ -627,25 +1000,48 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
             {/* Vendor List */}
             {selectedVendors.length > 0 && (
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Vendor Evaluation List</h2>
-                
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  Vendor Evaluation List
+                </h2>
+
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
                           Vendor
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
                           Price (₹)
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Availability
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {purchaseDetails?.purchaseRequestType !== "Machinery" && (
+                          <th
+                            scope="col"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            {purchaseDetails?.purchaseRequestType === "Misc"
+                              ? "Specifications"
+                              : purchaseDetails?.purchaseRequestType === "Material"
+                              ? "Observations"  
+                              : "Availability"}
+                          </th>
+                        )}
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
                           Recommended
                         </th>
-                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
                           Actions
                         </th>
                       </tr>
@@ -654,20 +1050,64 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
                       {selectedVendors.map((vendor, index) => (
                         <tr key={index}>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{vendor.name}</div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {vendor.name}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{vendor.price.toLocaleString()}</div>
+                            <div className="text-sm text-gray-900">
+                              {vendor.price.toLocaleString()}
+                            </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              vendor.availability 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {vendor.availability ? 'Yes' : 'No'}
-                            </span>
-                          </td>
+                          {purchaseDetails?.purchaseRequestType !== "Machinery" && (
+                            <td className="px-6 py-4">
+                              {purchaseDetails?.purchaseRequestType === "Misc" ? (
+                                <div className="space-y-1">
+                                  {vendor.availabilities?.map((av, avIndex) => (
+                                    <div key={avIndex} className="text-sm">
+                                      <span className="font-medium">
+                                        {av.param}:
+                                      </span>{" "}
+                                      {av.specification}
+                                      <span
+                                        className={`ml-2 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                          av.available
+                                            ? "bg-green-100 text-green-800"
+                                            : "bg-red-100 text-red-800"
+                                        }`}
+                                      >
+                                        {av.available ? "Yes" : "No"}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : purchaseDetails?.purchaseRequestType === "Material" ? (
+                                <div className="space-y-1">
+                                  {vendor.observabilities?.map((obs, obsIndex) => (
+                                    <div key={obsIndex} className="text-sm">
+                                      <span className="font-medium">
+                                        {getMaterialNameById(obs.materialId)} - {obs.param}:
+                                      </span>{" "}
+                                      {obs.specification}
+                                      <span className="ml-2 text-gray-700">
+                                        Observed: {obs.observedValue || "N/A"}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span
+                                  className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                    vendor.availability
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {vendor.availability ? "Yes" : "No"}
+                                </span>
+                              )}
+                            </td>
+                          )}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <input
@@ -703,14 +1143,14 @@ const VendorEvaluationPage = ({ params }: { params: { id: string } }) => {
                 disabled={submitting || selectedVendors.length === 0}
                 className="min-w-32"
               >
-                {submitting ? 'Submitting...' : 'Submit Evaluation'}
+                {submitting ? "Submitting..." : "Submit Evaluation"}
               </Button>
             </div>
           </>
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default VendorEvaluationPage
+export default VendorEvaluationPage;

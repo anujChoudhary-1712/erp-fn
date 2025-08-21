@@ -116,7 +116,7 @@ const MachineryPage = () => {
                     </p>
                     <Button
                         variant="primary"
-                        onClick={() => router.push("/dashboard/machinery/create")}
+                        onClick={() => router.push("/dashboard/purchases/create")}
                     >
                         Add Your First Machinery
                     </Button>

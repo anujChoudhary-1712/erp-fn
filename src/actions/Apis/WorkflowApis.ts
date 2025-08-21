@@ -22,8 +22,40 @@ const getSingleWorkflow = async (id: string) => {
     return ApiCalls.getResponse(`/workflows/${id}`, {}, getCookie("token"))
 }
 
-const WorkflowApis = {
-    addWorkflow, getAllWorkflows, updateWorkflow, deleteWorkflow, getSingleWorkflow
+// New functions for quality parameters
+const getStageQualityParameters = async (workflowId: string, stageId: string) => {
+    return ApiCalls.getResponse(
+        `/workflows/${workflowId}/stages/${stageId}/parameters`, 
+        {}, 
+        getCookie("token")
+    );
 }
 
-export default WorkflowApis
+const addStageQualityParameters = async (workflowId: string, stageId: string, data: any) => {
+    return ApiCalls.postResponse(
+        `/workflows/${workflowId}/stages/${stageId}/parameters`, 
+        data, 
+        getCookie("token")
+    );
+}
+
+const removeStageQualityParameter = async (workflowId: string, stageId: string, paramName: string) => {
+    return ApiCalls.deleteResponse(
+        `/workflows/${workflowId}/stages/${stageId}/parameters/${paramName}`, 
+        null, 
+        getCookie("token")
+    );
+}
+
+const WorkflowApis = {
+    addWorkflow, 
+    getAllWorkflows, 
+    updateWorkflow, 
+    deleteWorkflow, 
+    getSingleWorkflow,
+    getStageQualityParameters,
+    addStageQualityParameters,
+    removeStageQualityParameter
+}
+
+export default WorkflowApis;

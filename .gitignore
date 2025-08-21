@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/erp-frontend-production
 /.pnp
 .pnp.js
 .yarn/install-state.gz

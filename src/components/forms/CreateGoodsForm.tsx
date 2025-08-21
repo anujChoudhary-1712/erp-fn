@@ -43,28 +43,32 @@ const CreateGoodsForm: React.FC<CreateGoodsFormProps> = ({
   ];
 
   // Update form field
-  const updateField = (
-    field: keyof FinishedGoodData,
-    value: string | number
-  ): void => {
-    // Ensure numeric values are stored as proper numbers without leading zeros
-    if (typeof value === "string" && !isNaN(Number(value))) {
-      const numericFields = ["current_stock", "unit_price", "trigger_value"];
-      if (numericFields.includes(field as string)) {
-        value = Number(value);
-      }
-    }
+const updateField = (
+  field: keyof FinishedGoodData,
+  value: string | number
+): void => {
+  let newValue = value;
 
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    // Clear error for this field
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
+  // Check if the field is a numeric type
+  const numericFields = ["current_stock", "unit_price", "trigger_value"];
+  if (numericFields.includes(field as string)) {
+    if (value === "") {
+      newValue = "";
+    } else {
+      newValue = Number(value);
     }
-  };
+  }
+
+  setFormData((prev) => ({
+    ...prev,
+    [field]: newValue,
+  }));
+
+  // Clear error for this field
+  if (errors[field]) {
+    setErrors((prev) => ({ ...prev, [field]: "" }));
+  }
+};
 
   // Validation
   const validateForm = (): boolean => {

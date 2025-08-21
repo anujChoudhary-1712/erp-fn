@@ -4,7 +4,9 @@ import MachineryApis from '@/actions/Apis/MachineryApis'
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ReusableComponents/Button';
-import { formatDate } from '@/utils/date'; // Assuming a formatDate utility exists
+import { formatDate } from '@/utils/date';
+import { FileText } from "lucide-react";
+import DocumentCard from "@/components/DocumentCard";
 
 // TypeScript interface for maintenance history
 interface History {
@@ -13,6 +15,24 @@ interface History {
     record_type: string;
     remark: string;
     date: string;
+}
+
+// TypeScript interface for the nested document structure
+interface NestedDocument {
+    _id: string;
+    documents: any[];
+    latest_doc_id: string;
+    org_id: string;
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
+}
+
+// TypeScript interface for documents in the machinery schema
+interface MachineryDocument {
+    name: string;
+    document: NestedDocument;
+    _id: string;
 }
 
 // TypeScript interface for all machinery data
@@ -48,10 +68,29 @@ interface Machinery {
     plan_type: string;
     maintenance_frequency: string;
     history: History[];
+    documents: MachineryDocument[];
     org_id: string;
     created_date: string;
     last_modified_date: string;
 }
+
+// Re-defining the Document interface from the vendor page for use here
+interface Document {
+    _id: string;
+    docName: string;
+    fileName: string;
+    fileSize: number;
+    link: string;
+    status: string;
+    docType: string;
+    uploadDate: string;
+    description: string;
+    outerId: string;
+    org_id: string;
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
+  }
 
 const SingleMachineryPage = ({params}:{params:{id:string}}) => {
     const [machinery, setMachinery] = useState<Machinery | null>(null);
@@ -84,6 +123,51 @@ const SingleMachineryPage = ({params}:{params:{id:string}}) => {
         }
     }
 
+    // Helper function to extract document data from the nested structure
+    const extractMachineryDocument = (documentObj: MachineryDocument): Document | null => {
+      if (!documentObj || !documentObj.document || !documentObj.document.documents || documentObj.document.documents.length === 0) {
+        return null;
+      }
+  
+      // Get the latest document based on the `latest_doc_id`
+      const latestDoc = documentObj.document.documents.find(
+        (doc: any) => doc._id === documentObj.document.latest_doc_id
+      ) || documentObj.document.documents[0];
+  
+      return {
+        _id: latestDoc._id,
+        docName: latestDoc.docName,
+        fileName: latestDoc.fileName,
+        fileSize: latestDoc.fileSize,
+        link: latestDoc.link,
+        status: latestDoc.status,
+        docType: latestDoc.docType,
+        uploadDate: latestDoc.uploadDate,
+        description: latestDoc.description,
+        outerId: latestDoc.outerId,
+        org_id: latestDoc.org_id,
+        createdAt: latestDoc.createdAt,
+        updatedAt: latestDoc.updatedAt,
+        __v: latestDoc.__v,
+      };
+    };
+
+    const getMachineryDocuments = (): Document[] => {
+      if (!machinery || !machinery.documents) return [];
+
+      return machinery.documents.map(docItem => {
+        const doc = extractMachineryDocument(docItem);
+        if (doc) {
+          return {
+            ...doc,
+            docName: docItem.name || doc.docName,
+          }
+        }
+        return null;
+      }).filter(Boolean) as Document[];
+    };
+
+
     useEffect(()=>{
         fetchMachineryData();
     }, [params.id])
@@ -109,7 +193,6 @@ const SingleMachineryPage = ({params}:{params:{id:string}}) => {
         if (res.status === 200) {
           alert('Maintenance history added successfully!');
           setIsModalOpen(false);
-          // Re-fetch data to show the new history entry
           fetchMachineryData(); 
         } else {
           alert('Failed to add maintenance history.');
@@ -157,8 +240,8 @@ const SingleMachineryPage = ({params}:{params:{id:string}}) => {
         </div>
     );
     
-    // Sort history by date in descending order
     const sortedHistory = machinery.history?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [];
+    const allDocuments = getMachineryDocuments();
 
     const HistoryList = ({ history }: { history: History[] }) => (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
@@ -265,6 +348,29 @@ const SingleMachineryPage = ({params}:{params:{id:string}}) => {
                             <DataField label="Valid Upto" value={machinery.valid_upto ? formatDate(machinery.valid_upto) : 'N/A'} />
                             <DataField label="ULR No." value={machinery.ulr_no} />
                         </div>
+                    </div>
+
+                    {/* Documents Section */}
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-6">Documents</h2>
+                        
+                        {allDocuments.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {allDocuments.map((doc, index) => (
+                              <DocumentCard
+                                key={`${doc._id}-${index}`}
+                                document={doc}
+                                showActions={false}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                            <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
+                            <p className="text-gray-500">No documents have been uploaded for this machinery yet.</p>
+                          </div>
+                        )}
                     </div>
 
                     {/* Maintenance */}

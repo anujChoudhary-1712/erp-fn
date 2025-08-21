@@ -50,7 +50,7 @@ const ReportsPage = () => {
                 const fetchedReports = res.data.reportNcomplaints || [];
                 setAllReports(fetchedReports);
                 // Set initial filtered reports based on 'open' tab
-                setReports(fetchedReports.filter(report => report.status === 'open'));
+                setReports(fetchedReports.filter((report: { status: string; }) => report.status === 'open'));
             } else {
                 setReports([]);
                 setAllReports([]);

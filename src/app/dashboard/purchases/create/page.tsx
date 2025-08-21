@@ -170,7 +170,7 @@ const CreatePurchasePage: React.FC = () => {
         )}
 
         {/* Form */}
-        <CreatePurchaseForm onSubmit={handleCreatePurchase} loading={loading} />
+        <CreatePurchaseForm loading={loading} />
 
         {/* Loading Overlay */}
         {loading && (

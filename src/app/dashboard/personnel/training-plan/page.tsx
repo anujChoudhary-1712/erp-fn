@@ -106,7 +106,13 @@ const TrainingPlanPage = () => {
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                Discipline
+                Name of Training
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Department
               </th>
               <th
                 scope="col"
@@ -151,7 +157,10 @@ const TrainingPlanPage = () => {
               trainingPlans.map((plan: any) => (
                 <tr key={plan._id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {plan.discipline}
+                    {plan.nameOfTraining}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {plan.department}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(plan.start_date)}
@@ -212,7 +221,7 @@ const TrainingPlanPage = () => {
             ) : (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-6 py-4 text-center text-sm text-gray-500"
                 >
                   No training plans found.

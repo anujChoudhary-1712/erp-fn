@@ -5,6 +5,8 @@ import { ChevronDown, ChevronRight, LogOut, Bell } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import NotificationApis from "@/actions/Apis/NotificationApis";
+import Image from "next/image";
+import logo from "../../../public/images/logo.png"
 
 interface NavItem {
   id: string;
@@ -21,6 +23,22 @@ interface SidebarProps {
   userType: "internal" | "organization";
 }
 
+interface Notification {
+  _id: string;
+  materialId?: string;
+  materialName?: string;
+  currentStock?: number;
+  triggerValue?: number;
+  message?: string;
+  planId?: string;
+  access?: string[];
+  isRead: boolean;
+  org_id: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
 const Sidebar: React.FC<SidebarProps> = ({
   navigationItems,
   currentPath = "/",
@@ -33,33 +51,63 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { user, logout } = useUser();
   const router = useRouter();
 
+  // Function to check if user has access to a notification
+  const hasNotificationAccess = (notification: Notification) => {
+    // If no access array is defined, default to allowing access (backward compatibility)
+    if (!notification.access || notification.access.length === 0) {
+      return true;
+    }
+
+    // If access array contains "all", show to everyone
+    if (notification.access.includes('all')) {
+      return true;
+    }
+
+    // If no user or user roles, deny access
+    if (!user?.roles || user.roles.length === 0) {
+      return false;
+    }
+
+    // Check if user has any of the roles specified in the access array
+    return notification.access.some(accessRole => user.roles.includes(accessRole));
+  };
+
+  // Filter notifications based on user access
+  const filterNotificationsByAccess = (notifications: Notification[]) => {
+    return notifications.filter(notification => hasNotificationAccess(notification));
+  };
+
   // Fetch unread notifications count
   const fetchUnreadCount = async () => {
     try {
       const res = await NotificationApis.getAllNotifications(`isRead=false`);
       if (res.status === 200) {
-        setUnreadCount(res.data?.length || 0);
+        // Filter notifications based on user access before counting
+        const filteredNotifications = filterNotificationsByAccess(res.data || []);
+        setUnreadCount(filteredNotifications.length);
       }
     } catch (error) {
       console.error('Error fetching unread notifications:', error);
     }
   };
 
-  // Setup polling for notifications
+  // Setup polling for notifications, only for organization users
   useEffect(() => {
-    // Initial fetch
-    fetchUnreadCount();
+    if (userType === "organization" && user) {
+      // Initial fetch - only after user is loaded
+      fetchUnreadCount();
 
-    // Setup polling interval
-    const pollInterval = setInterval(() => {
-      if (isPolling) {
-        fetchUnreadCount();
-      }
-    }, 5000); // Poll every 5 seconds
+      // Setup polling interval
+      const pollInterval = setInterval(() => {
+        if (isPolling && user) {
+          fetchUnreadCount();
+        }
+      }, 5000); // Poll every 5 seconds
 
-    // Cleanup on unmount
-    return () => clearInterval(pollInterval);
-  }, [isPolling]);
+      // Cleanup on unmount
+      return () => clearInterval(pollInterval);
+    }
+  }, [isPolling, userType, user]); // Added user as dependency
 
   // Pause polling when tab is not visible (optional optimization)
   useEffect(() => {
@@ -103,6 +151,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Get the first letter of user's name for avatar
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : "U";
+
+  // Determine which name to display based on userType
+  const companyName = userType === "internal" ? "Prosca" : user?.orgName || "Organization";
 
   const renderNavItem = (item: NavItem, level: number = 0) => {
     const hasChildren = item.children && item.children.length > 0;
@@ -159,31 +210,42 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Header with Notification Bell */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-800">{user ? user.orgName : "Default Org Name"}</h2>
-            
-            {/* Notification Bell */}
-            <div className="relative">
-              <button
-                onClick={handleNotificationClick}
-                className={`
-                  p-2 rounded-lg transition-colors duration-200 relative
-                  ${currentPath === '/dashboard/notifications' 
-                    ? 'bg-blue-100 text-blue-600' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }
-                `}
-                aria-label="View notifications"
-              >
-                <Bell size={20} />
-                
-                {/* Unread Count Badge */}
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </button>
+            <div className="flex items-center space-x-2">
+              <Image
+                src={logo}
+                alt="Prosca Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8"
+              />
+              <h2 className="text-xl font-bold text-gray-800">{companyName}</h2>
             </div>
+
+            {/* Notification Bell - visible only for organization users with proper access */}
+            {userType === "organization" && user && (
+              <div className="relative">
+                <button
+                  onClick={handleNotificationClick}
+                  className={`
+                    p-2 rounded-lg transition-colors duration-200 relative
+                    ${currentPath === '/dashboard/notifications'
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    }
+                  `}
+                  aria-label="View notifications"
+                >
+                  <Bell size={20} />
+
+                  {/* Unread Count Badge */}
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,10 +1,120 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import InputField from '@/components/ReusableComponents/InputField';
 import Button from '@/components/ReusableComponents/Button';
+import { Upload, X, FileText, Trash2 } from 'lucide-react';
+import { getCookie } from '@/actions/CookieUtils';
+
+interface Evidence {
+  document: string;
+  name: string;
+}
+
+// Minimal Document Upload Modal Component
+interface DocumentUploadModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onUploadSuccess: (documentId: string, documentName: string) => void;
+}
+
+const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClose, onUploadSuccess }) => {
+  const [docName, setDocName] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const handleFileUpload = async () => {
+    if (!docName.trim() || !file) {
+      setError('Please provide a document name and select a file.');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("description", docName);
+    formData.append("docName", docName);
+    formData.append("docType", "Machinery Document");
+
+    try {
+      const token = getCookie("token");
+      const response = await fetch("http://localhost:8001/api/documents/upload", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload document");
+      }
+
+      const data = await response.json();
+      onUploadSuccess(data.document._id, docName);
+      setDocName('');
+      setFile(null);
+      onClose();
+      
+    } catch (err: any) {
+      console.error("Error uploading document:", err);
+      setError(err.message || "Error uploading file. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold">Upload Document</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={20} />
+          </button>
+        </div>
+        {error && <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">{error}</div>}
+        
+        <div className="space-y-4">
+          <InputField
+            label="Document Name"
+            type="text"
+            value={docName}
+            onChange={(e) => setDocName(e.target.value)}
+            placeholder="e.g., Manual, Certificate"
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select File</label>
+            <input
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-50 file:text-blue-700
+                hover:file:bg-blue-100"
+            />
+          </div>
+        </div>
+        
+        <div className="flex justify-end space-x-4 mt-6">
+          <Button type="button" variant="outline" onClick={onClose} disabled={uploading}>Cancel</Button>
+          <Button type="button" variant="primary" onClick={handleFileUpload} disabled={uploading}>
+            {uploading ? 'Uploading...' : 'Upload'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // TypeScript interfaces for form data
 interface MachineryFormData {
-  // Basic Information
   standard_type: string;
   discipline: string;
   group: string;
@@ -14,20 +124,14 @@ interface MachineryFormData {
   sr_no: string;
   make: string;
   model: string;
-
-  // Procurement & Setup
   procurement: string;
   commissioning: string;
   instruction_manual: string;
   location: string;
-
-  // Technical Specifications
   tolerance_sign: string;
   acceptance_criteria: string;
   acceptance_criteria_unit_type: string;
   verification_conformity: string;
-
-  // Calibration Information
   certificate_no: string;
   calibration_agency: string;
   calibration_date: string;
@@ -35,15 +139,12 @@ interface MachineryFormData {
   valid_upto: string;
   ulr_no: string;
   coverage_factor: string;
-
-  // Error & Measurement Details
   master_error: string;
   error_unit: string;
   drift_in_standard: string;
-
-  // Maintenance Information
   plan_type: string;
   maintenance_frequency: string;
+  documents: Evidence[];
 }
 
 interface MachineryFormProps {
@@ -51,17 +152,12 @@ interface MachineryFormProps {
   loading?: boolean;
 }
 
-// Sample options for dropdowns
-const DISCIPLINE_OPTIONS = ["Discipline One", "Discipline Two", "Discipline Three"];
-const GROUP_OPTIONS = ["Group A", "Group B", "Group C"];
-const DEVICE_TYPE_OPTIONS = ["Type 1", "Type 2", "Type 3"];
 const FREQUENCY_OPTIONS = ["1", "3", "6", "12", "24"];
 const ERROR_UNIT_OPTIONS = ["mm", "cm", "m", "kg", "g", "°C"];
 const ACCEPTANCE_CRITERIA_UNIT_OPTIONS = ["mm", "cm", "m", "kg", "g", "°C"];
 
 const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false }) => {
   const [formData, setFormData] = useState<MachineryFormData>({
-    // Basic Information
     standard_type: "Primary",
     discipline: "",
     group: "",
@@ -71,20 +167,14 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
     sr_no: "",
     make: "",
     model: "",
-
-    // Procurement & Setup
     procurement: "",
     commissioning: "",
     instruction_manual: "Yes",
     location: "",
-
-    // Technical Specifications
     tolerance_sign: "+",
     acceptance_criteria: "",
     acceptance_criteria_unit_type: "",
     verification_conformity: "Yes",
-
-    // Calibration Information
     certificate_no: "",
     calibration_agency: "",
     calibration_date: "",
@@ -92,27 +182,25 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
     valid_upto: "",
     ulr_no: "",
     coverage_factor: "",
-
-    // Error & Measurement Details
     master_error: "",
     error_unit: "",
     drift_in_standard: "0",
-
-    // Maintenance Information
     plan_type: "Internal",
     maintenance_frequency: "",
+    documents: [],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [uploadSuccessMessage, setUploadSuccessMessage] = useState('');
 
-  // Handle input change
   const handleChange = (field: keyof MachineryFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
 
-    // Clear error for this field if it exists
     if (errors[field]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -122,19 +210,47 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
     }
   };
 
-  // Handle radio buttons
   const handleRadioChange = (field: keyof MachineryFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
+  
+  const handleManualUploadSuccess = (documentId: string, documentName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      documents: [...prev.documents, { document: documentId, name: documentName }]
+    }));
+    setUploadSuccessMessage(`Instruction Manual "${documentName}" uploaded successfully!`);
+    setIsManualModalOpen(false);
+    setTimeout(() => {
+      setUploadSuccessMessage('');
+    }, 5000);
+  };
 
-  // Validate form
+  const handleVerificationUploadSuccess = (documentId: string, documentName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      documents: [...prev.documents, { document: documentId, name: documentName }]
+    }));
+    setUploadSuccessMessage(`Verification Conformity "${documentName}" uploaded successfully!`);
+    setIsVerificationModalOpen(false);
+    setTimeout(() => {
+      setUploadSuccessMessage('');
+    }, 5000);
+  };
+  
+  const handleRemoveDocument = (documentId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      documents: prev.documents.filter(doc => doc.document !== documentId)
+    }));
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
-    // Required fields validation
     const requiredFields: (keyof MachineryFormData)[] = [
       'name', 'lab_id', 'device_type', 'discipline', 'group'
     ];
@@ -145,14 +261,11 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
       }
     });
     
-    // Set errors
     setErrors(newErrors);
     
-    // Return true if no errors
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -163,11 +276,9 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
 
   return (
     <div className="space-y-6">
-      {/* Basic Information */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
         
-        {/* Standard Type */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2 text-gray-700">
             Standard Type
@@ -199,134 +310,98 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Discipline */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Discipline <span className="text-red-500">*</span>
             </label>
-            <select
+            <InputField
+              type="text"
+              name="discipline"
               value={formData.discipline}
               onChange={(e) => handleChange("discipline", e.target.value)}
-              className={`w-full px-3 py-2 border ${
-                errors.discipline ? 'border-red-500' : 'border-gray-300'
-              } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-            >
-              <option value="">Please Select</option>
-              {DISCIPLINE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            {errors.discipline && (
-              <p className="mt-1 text-sm text-red-600">{errors.discipline}</p>
-            )}
+              required
+              error={errors.discipline}
+            />
           </div>
           
-          {/* Group */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Group <span className="text-red-500">*</span>
             </label>
-            <select
+            <InputField
+              type="text"
+              name="group"
               value={formData.group}
               onChange={(e) => handleChange("group", e.target.value)}
-              className={`w-full px-3 py-2 border ${
-                errors.group ? 'border-red-500' : 'border-gray-300'
-              } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-            >
-              <option value="">Please Select</option>
-              {GROUP_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            {errors.group && (
-              <p className="mt-1 text-sm text-red-600">{errors.group}</p>
-            )}
+              required
+              error={errors.group}
+            />
           </div>
         </div>
         
-        {/* Device Type */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2 text-gray-700">
             Device Type <span className="text-red-500">*</span>
           </label>
-          <select
-            value={formData.device_type}
-            onChange={(e) => handleChange("device_type", e.target.value)}
-            className={`w-full px-3 py-2 border ${
-              errors.device_type ? 'border-red-500' : 'border-gray-300'
-            } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-          >
-            <option value="">Please Select</option>
-            {DEVICE_TYPE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          {errors.device_type && (
-            <p className="mt-1 text-sm text-red-600">{errors.device_type}</p>
-          )}
+            <InputField
+              type="text"
+              name="device_type"
+              value={formData.device_type}
+              onChange={(e) => handleChange("device_type", e.target.value)}
+              required
+              error={errors.device_type}
+            />
         </div>
         
-        {/* Name */}
         <div className="mb-4">
           <InputField
             label="Name"
             value={formData.name}
-            onChange={(e) => handleChange("name", e.target.value)}
+            onChange={(e) => handleChange("name", e.target.value as any)}
             required
             error={errors.name}
           />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Lab ID */}
           <div>
             <InputField
               label="Lab ID"
               value={formData.lab_id}
-              onChange={(e) => handleChange("lab_id", e.target.value)}
+              onChange={(e) => handleChange("lab_id", e.target.value as any)}
               required
               error={errors.lab_id}
             />
           </div>
           
-          {/* Sr No */}
           <div>
             <InputField
               label="Sr No."
               value={formData.sr_no}
-              onChange={(e) => handleChange("sr_no", e.target.value)}
+              onChange={(e) => handleChange("sr_no", e.target.value as any)}
             />
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Make */}
           <div>
             <InputField
               label="Make"
               value={formData.make}
-              onChange={(e) => handleChange("make", e.target.value)}
+              onChange={(e) => handleChange("make", e.target.value as any)}
             />
           </div>
           
-          {/* Model */}
           <div>
             <InputField
               label="Model"
               value={formData.model}
-              onChange={(e) => handleChange("model", e.target.value)}
+              onChange={(e) => handleChange("model", e.target.value as any)}
             />
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Procurement */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Procurement
@@ -334,12 +409,11 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
             <input
               type="date"
               value={formData.procurement}
-              onChange={(e) => handleChange("procurement", e.target.value)}
+              onChange={(e) => handleChange("procurement", e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           
-          {/* Commissioning */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Commissioning
@@ -347,14 +421,13 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
             <input
               type="date"
               value={formData.commissioning}
-              onChange={(e) => handleChange("commissioning", e.target.value)}
+              onChange={(e) => handleChange("commissioning", e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Instruction Manual */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Instruction Manual
@@ -385,23 +458,68 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
             </div>
           </div>
           
-          {/* Location */}
           <div>
             <InputField
               label="Location"
               value={formData.location}
-              onChange={(e) => handleChange("location", e.target.value)}
+              onChange={(e) => handleChange("location", e.target.value as any)}
             />
           </div>
         </div>
+        
+        {formData.instruction_manual === 'Yes' && (
+          <div className="md:col-span-2 mt-6">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Instruction Manual Document</h2>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => setIsManualModalOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {uploadSuccessMessage && (
+                  <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-lg">
+                    {uploadSuccessMessage}
+                  </div>
+                )}
+                {formData.documents && formData.documents.length > 0 ? (
+                  formData.documents.filter(doc => doc.name.includes("Manual")).map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-5 w-5 text-blue-500" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => handleRemoveDocument(doc.document)}
+                        className="p-1 text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-gray-500">No documents uploaded yet.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
-      {/* Technical Specifications */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Technical Specifications</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Tolerance Sign */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Tolerance Sign
@@ -443,36 +561,33 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
             </div>
           </div>
           
-          {/* Acceptance Criteria */}
           <div>
             <InputField
               label="Acceptance Criteria"
               value={formData.acceptance_criteria}
-              onChange={(e) => handleChange("acceptance_criteria", e.target.value)}
+              onChange={(e) => handleChange("acceptance_criteria", e.target.value as any)}
             />
           </div>
         </div>
         
-        {/* Acceptance Criteria Unit Type */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2 text-gray-700">
             Acceptance Criteria Unit Type
           </label>
           <select
             value={formData.acceptance_criteria_unit_type}
-            onChange={(e) => handleChange("acceptance_criteria_unit_type", e.target.value)}
+            onChange={(e) => handleChange("acceptance_criteria_unit_type", e.target.value as any)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Please select</option>
             {ACCEPTANCE_CRITERIA_UNIT_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
+                <option key={option} value={option}>
+                  {option}
+                </option>
             ))}
           </select>
         </div>
         
-        {/* Verification Conformity */}
         <div>
           <label className="block text-sm font-medium mb-2 text-gray-700">
             Verification Conformity
@@ -497,39 +612,83 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
                 checked={formData.verification_conformity === "No"}
                 onChange={() => handleRadioChange("verification_conformity", "No")}
                 className="mr-2"
-              />
+                />
               <label htmlFor="verification_no">No</label>
             </div>
           </div>
         </div>
+        
+        {formData.verification_conformity === 'Yes' && (
+          <div className="md:col-span-2 mt-6">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Verification Conformity Document</h2>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => setIsVerificationModalOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {uploadSuccessMessage && (
+                  <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-lg">
+                    {uploadSuccessMessage}
+                  </div>
+                )}
+                {formData.documents && formData.documents.length > 0 ? (
+                  formData.documents.filter(doc => doc.name.includes("Conformity")).map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-5 w-5 text-blue-500" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => handleRemoveDocument(doc.document)}
+                        className="p-1 text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-gray-500">No documents uploaded yet.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
-      {/* Calibration Information */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Calibration Information</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Certificate No */}
           <div>
             <InputField
               label="Certificate No."
               value={formData.certificate_no}
-              onChange={(e) => handleChange("certificate_no", e.target.value)}
+              onChange={(e) => handleChange("certificate_no", e.target.value as any)}
             />
           </div>
           
-          {/* Calibration Agency */}
           <div>
             <InputField
               label="Calibration Agency"
               value={formData.calibration_agency}
-              onChange={(e) => handleChange("calibration_agency", e.target.value)}
+              onChange={(e) => handleChange("calibration_agency", e.target.value as any)}
             />
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          {/* Calibration Date */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Calibration Date
@@ -537,19 +696,18 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
             <input
               type="date"
               value={formData.calibration_date}
-              onChange={(e) => handleChange("calibration_date", e.target.value)}
+              onChange={(e) => handleChange("calibration_date", e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           
-          {/* Calibration Frequency */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Calibration Frequency in month
             </label>
             <select
               value={formData.calibration_frequency}
-              onChange={(e) => handleChange("calibration_frequency", e.target.value)}
+              onChange={(e) => handleChange("calibration_frequency", e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Please Select</option>
@@ -561,7 +719,6 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
             </select>
           </div>
           
-          {/* Valid Up To */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Valid Up To
@@ -569,52 +726,48 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
             <input
               type="date"
               value={formData.valid_upto}
-              onChange={(e) => handleChange("valid_upto", e.target.value)}
+              onChange={(e) => handleChange("valid_upto", e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* ULR No */}
           <div>
             <InputField
               label="ULR No."
               value={formData.ulr_no}
-              onChange={(e) => handleChange("ulr_no", e.target.value)}
+              onChange={(e) => handleChange("ulr_no", e.target.value as any)}
             />
           </div>
           
-          {/* Coverage Factor */}
           <div>
             <InputField
               label="Coverage Factor"
               value={formData.coverage_factor}
-              onChange={(e) => handleChange("coverage_factor", e.target.value)}
+              onChange={(e) => handleChange("coverage_factor", e.target.value as any)}
               type="number"
             />
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Master Error */}
           <div>
             <InputField
               label="Master Error"
               value={formData.master_error}
-              onChange={(e) => handleChange("master_error", e.target.value)}
+              onChange={(e) => handleChange("master_error", e.target.value as any)}
               type="number"
             />
           </div>
           
-          {/* Error Unit */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Error Unit
             </label>
             <select
               value={formData.error_unit}
-              onChange={(e) => handleChange("error_unit", e.target.value)}
+              onChange={(e) => handleChange("error_unit", e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Please select</option>
@@ -627,23 +780,20 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
           </div>
         </div>
         
-        {/* Drift in Standard */}
         <div className="mt-4">
           <InputField
             label="Drift in Standard (in %)"
             value={formData.drift_in_standard}
-            onChange={(e) => handleChange("drift_in_standard", e.target.value)}
+            onChange={(e) => handleChange("drift_in_standard", e.target.value as any)}
             type="number"
           />
         </div>
       </div>
       
-      {/* Maintenance Plan */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Maintenance Plan</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          {/* Plan Type */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Plan Type
@@ -674,14 +824,13 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
             </div>
           </div>
           
-          {/* Maintenance Frequency */}
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Maintenance Frequency in month
             </label>
             <select
               value={formData.maintenance_frequency}
-              onChange={(e) => handleChange("maintenance_frequency", e.target.value)}
+              onChange={(e) => handleChange("maintenance_frequency", e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Please Select</option>
@@ -695,7 +844,6 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
         </div>
       </div>
       
-      {/* Submit Button */}
       <div className="flex justify-end">
         <Button
           type="submit"
@@ -707,6 +855,17 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
           {loading ? 'Saving...' : 'Save'}
         </Button>
       </div>
+      
+      <DocumentUploadModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        onUploadSuccess={handleManualUploadSuccess}
+      />
+      <DocumentUploadModal
+        isOpen={isVerificationModalOpen}
+        onClose={() => setIsVerificationModalOpen(false)}
+        onUploadSuccess={handleVerificationUploadSuccess}
+      />
     </div>
   );
 };

@@ -11,6 +11,7 @@ interface MaterialItem {
 interface MaterialsFormProps {
   onSubmit: (data: { materials: MaterialItem[] }) => Promise<void>;
   loading?: boolean;
+  initialMaterialIds?: string[]; // Prop to receive IDs from URL
 }
 
 interface RawMaterial {
@@ -26,7 +27,11 @@ interface RawMaterial {
   };
 }
 
-const MaterialsForm: React.FC<MaterialsFormProps> = ({ onSubmit, loading = false }) => {
+const MaterialsForm: React.FC<MaterialsFormProps> = ({
+  onSubmit,
+  loading = false,
+  initialMaterialIds = [], // Default to an empty array
+}) => {
   // Current material being added
   const [currentMaterial, setCurrentMaterial] = useState<MaterialItem>({
     materialId: '',
@@ -60,6 +65,25 @@ const MaterialsForm: React.FC<MaterialsFormProps> = ({ onSubmit, loading = false
 
     fetchMaterials();
   }, []);
+
+  // --- MODIFIED: Effect to pre-select the first material from the URL ---
+  useEffect(() => {
+    // This effect now only sets the CURRENTLY selected material, not the whole list.
+    if (materials.length > 0 && initialMaterialIds.length > 0) {
+      // Get the first material ID from the URL params
+      const firstMaterialId = initialMaterialIds[0];
+      const materialToSelect = materials.find(m => m._id === firstMaterialId);
+
+      // If found, set it in the "Add New Material" dropdown and quantity fields
+      if (materialToSelect) {
+        setCurrentMaterial({
+          materialId: materialToSelect._id,
+          materialName: materialToSelect.material_name,
+          quantity: 1, // Default quantity to 1, user can edit
+        });
+      }
+    }
+  }, [materials, initialMaterialIds]); // Dependencies are the fetched materials and the IDs from props
 
   const handleMaterialChange = (materialId: string) => {
     const selectedMaterial = materials.find(m => m._id === materialId);

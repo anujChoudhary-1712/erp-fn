@@ -57,15 +57,20 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
   }>({});
 
   const availableRoles = [
-    { value: "store_mgt", label: "Store Management" },
-    { value: "vendors_mgt", label: "Vendors Management" },
-    { value: "document_mgt", label: "Document Management" },
-    { value: "order_mgt", label: "Order Management" },
-    { value: "machinery_mgt", label: "Machinery Management" },
-    { value: "report", label: "Report & Complaint" },
-    { value: "production", label: "Production" },
-    { value: "quality_check", label: "Quality Check" },
     { value: "dashboard", label: "Dashboard" },
+    { value: "orders", label: "Orders" },
+    { value: "store_finished_goods", label: "Store: Finished Goods" },
+    { value: "store_raw_materials", label: "Store: Raw Materials" },
+    // { value: "purchase_request", label: "Purchase Request" },
+    { value: "vendors", label: "Vendors" },
+    { value: "production_plans", label: "Production: Plans" },
+    { value: "production_batch_mgt", label: "Production: Batch Management" },
+    // { value: "dispatch", label: "Dispatch" },
+    { value: "documents", label: "Documents" },
+    { value: "machinery", label: "Machinery" },
+    { value: "reports", label: "Reports & Complaints" },
+    { value: "personnel_team", label: "Personnel: Team" },
+    { value: "personnel_training", label: "Personnel: Training" },
     { value: "admin", label: "Admin" },
   ];
 
@@ -99,7 +104,7 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
         setFormData({
           name: "",
           email: "",
-          roles: ["store_mgt"],
+          roles: ["orders"],
           department: "",
           position: "",
           joiningDate: new Date().toISOString().split('T')[0],

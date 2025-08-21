@@ -5,6 +5,8 @@ import { formatDate } from '@/utils/date';
 import { getStatusColor } from '@/utils/order';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
+import { FileText } from 'lucide-react';
+import DocumentCard from '@/components/DocumentCard';
 
 // TypeScript interfaces
 interface Dimension {
@@ -97,7 +99,6 @@ interface Machinery {
   commissioning?: string;
   instruction_manual?: string;
   location?: string;
-  // Additional fields exist but not needed for basic display
 }
 
 interface Misc {
@@ -125,9 +126,28 @@ interface TimelineEntry {
 
 interface Document {
   _id: string;
-  filename: string;
-  description: string;
+  docName: string;
+  fileName: string;
+  fileSize: number;
+  link: string;
   uploadDate: string;
+  status: string;
+  docType: string;
+  description: string;
+  outerId: string;
+  org_id: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+interface PurchaseDocument {
+  name: string;
+  documentId: {
+    _id: string;
+    documents: Document[];
+    latest_doc_id: string;
+  };
 }
 
 interface Purchase {
@@ -140,7 +160,7 @@ interface Purchase {
   estimatedDate?: string;
   status: string;
   instructions?: string;
-  documents: Document[];
+  documents: PurchaseDocument[];
   timeline: TimelineEntry[];
   org_id: string;
   vendorsEvaluated: Array<{
@@ -172,7 +192,6 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
       const res = await PurchaseReqApis.getSinglePurchase(params.id);
       if (res.status === 200) {
         setPurchase(res.data.requirement);
-        console.log("Single Purchase: ", res.data);
       } else {
         setError("Failed to fetch purchase requirement");
       }
@@ -202,6 +221,8 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
         return '✅';
       case 'rejected':
         return '❌';
+      case 'purchase received':
+        return '📦';
       default:
         return '📋';
     }
@@ -221,6 +242,8 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
         return '✅';
       case 'rejected':
         return '❌';
+      case 'purchase received':
+        return '📦';
       default:
         return '📝';
     }
@@ -251,7 +274,6 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
     };
   };
 
-  // Handle approve request action
   const handleApproveRequest = async () => {
     if (!purchase) return;
     
@@ -259,7 +281,6 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
     try {
       const response = await PurchaseReqApis.updateStatus(purchase._id, "Request Approved");
       if (response.status === 200) {
-        // Refresh the purchase data
         fetchSinglePurchase();
       } else {
         setError("Failed to approve request");
@@ -272,26 +293,61 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
     }
   };
   
-  // Handle purchase received action
   const handlePurchaseReceived = async () => {
-    if (!purchase) return;
-    
-    setActionLoading(true);
-    try {
-      const response = await PurchaseReqApis.updateStatus(purchase._id, "Received");
-      if (response.status === 200) {
-        // Refresh the purchase data
-        fetchSinglePurchase();
-      } else {
-        setError("Failed to mark purchase as received");
-      }
-    } catch (error) {
-      console.error("Error marking purchase as received:", error);
-      setError("An error occurred while updating the purchase status");
-    } finally {
-      setActionLoading(false);
-    }
+    router.push(`/dashboard/purchases/${purchase?._id}/purchase-received`);
   };
+
+  const extractDocumentData = (documentObj: any): Document | null => {
+    if (!documentObj || !documentObj.documents || documentObj.documents.length === 0) {
+      return null;
+    }
+
+    const latestDoc = documentObj.documents.find(
+      (doc: any) => doc._id === documentObj.latest_doc_id
+    ) || documentObj.documents[0];
+
+    return {
+      _id: latestDoc._id,
+      docName: latestDoc.docName,
+      fileName: latestDoc.fileName,
+      fileSize: latestDoc.fileSize,
+      link: latestDoc.link,
+      status: latestDoc.status,
+      docType: latestDoc.docType,
+      uploadDate: latestDoc.uploadDate,
+      description: latestDoc.description,
+      outerId: latestDoc.outerId,
+      org_id: latestDoc.org_id,
+      createdAt: latestDoc.createdAt,
+      updatedAt: latestDoc.updatedAt,
+      __v: latestDoc.__v,
+    };
+  };
+
+  const getAllDocuments = (): Document[] => {
+    if (!purchase) return [];
+
+    const allDocs: Document[] = [];
+
+    if (purchase.documents && purchase.documents.length > 0) {
+      purchase.documents.forEach((docItem) => {
+        const doc = extractDocumentData(docItem.documentId);
+        if (doc) {
+          allDocs.push({
+            ...doc,
+            docName: docItem.name || doc.docName,
+            description: docItem.name || doc.description,
+          });
+        }
+      });
+    }
+
+    return allDocs;
+  };
+  
+  const isPurchaseReceived = purchase?.status.toLowerCase() === 'purchase received';
+  const allDocuments = getAllDocuments();
+
 
   if (loading) {
     return (
@@ -386,7 +442,6 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
                   </div>
                 )}
                 
-                {/* Get selected vendor if exists */}
                 {(() => {
                   const selectedVendor = purchase.vendorsEvaluated?.find(v => v.isSelected);
                   if (selectedVendor && selectedVendor.estimatedDeliveryDate) {
@@ -440,12 +495,10 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
             
             {/* Selected Vendor Details */}
             {purchase.status.toLowerCase() === 'vendor selected' && (() => {
-              // Find the selected vendor
               const selectedVendorData = purchase.vendorsEvaluated?.find(v => v.isSelected);
               
               if (!selectedVendorData) return null;
               
-              // Handle both string and object vendorId formats
               const vendorDetails = typeof selectedVendorData.vendorId === 'object' 
                 ? selectedVendorData.vendorId 
                 : null;
@@ -754,7 +807,7 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
                   <div className="flex justify-end mt-4">
                     <Button 
                       variant="primary" 
-                      onClick={() => router.push(`/dashboard/machinery/${purchase.machineryId._id}`)}
+                      onClick={() => purchase.machineryId && router.push(`/dashboard/machinery/${purchase.machineryId._id}`)}
                       className="text-sm"
                     >
                       View All Details
@@ -797,108 +850,97 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
             )}
 
             {/* Documents */}
-            {purchase.documents && purchase.documents.length > 0 && (
+            {allDocuments.length > 0 && (
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Attached Documents</h2>
-                <div className="space-y-3">
-                  {purchase.documents.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-blue-500">
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{doc.description}</p>
-                          <p className="text-sm text-gray-600">{doc.filename}</p>
-                        </div>
-                      </div>
-                      <Button variant="outline" className="text-sm">
-                        Download
-                      </Button>
-                    </div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Documents</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {allDocuments.map((doc, index) => (
+                    <DocumentCard
+                      key={`${doc._id}-${index}`}
+                      document={doc}
+                      showActions={false}
+                    />
                   ))}
                 </div>
               </div>
             )}
+            
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
-              <div className="space-y-3">
-                <Button variant="primary" className="w-full" onClick={() => router.push(`/dashboard/purchases/${purchase._id}/edit`)}>
-                  Edit Requirement
-                </Button>
-                
-                {purchase.status.toLowerCase() === 'requested' && (
-                  <Button 
-                    variant="success" 
-                    className="w-full"
-                    onClick={handleApproveRequest}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? 'Processing...' : 'Approve Request'}
-                  </Button>
-                )}
-                
-                {purchase.status.toLowerCase() === 'request approved' && (
-                  <>
-                    {purchase.vendorsEvaluated && purchase.vendorsEvaluated.length > 0 ? (
-                      <Button 
-                        variant="primary" 
-                        className="w-full"
-                        onClick={() => router.push(`/dashboard/purchases/${purchase._id}/evaluation?selection=required`)}
-                      >
-                        Select Vendor
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="primary" 
-                        className="w-full"
-                        onClick={() => router.push(`/dashboard/purchases/${purchase._id}/evaluation`)}
-                      >
-                        Vendor Evaluation
-                      </Button>
-                    )}
-                  </>
-                )}
-                
-                {purchase.status.toLowerCase() === 'pending' && (
-                  <Button 
-                    variant="success" 
-                    className="w-full"
-                    onClick={() => router.push(`/dashboard/purchases/${purchase._id}/fulfill`)}
-                  >
-                    Fulfill Requirement
-                  </Button>
-                )}
-                
-                {purchase.status.toLowerCase() === 'verification needed' && (
-                  <Button 
-                    variant="primary" 
-                    className="w-full"
-                    onClick={() => router.push(`/dashboard/purchases/${purchase._id}/verify`)}
-                  >
-                    Verify Purchase
-                  </Button>
-                )}
-                
-                {purchase.status.toLowerCase() === 'vendor selected' && (
-                  <Button 
-                    variant="success" 
-                    className="w-full"
-                    onClick={handlePurchaseReceived}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? 'Processing...' : 'Purchase Received'}
-                  </Button>
-                )}
+            {!isPurchaseReceived && (
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
+                <div className="space-y-3">
+                  
+                  {purchase.status.toLowerCase() === 'requested' && (
+                    <Button 
+                      variant="success" 
+                      className="w-full"
+                      onClick={handleApproveRequest}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? 'Processing...' : 'Approve Request'}
+                    </Button>
+                  )}
+                  
+                  {purchase.status.toLowerCase() === 'request approved' && (
+                    <>
+                      {purchase.vendorsEvaluated && purchase.vendorsEvaluated.length > 0 ? (
+                        <Button 
+                          variant="primary" 
+                          className="w-full"
+                          onClick={() => router.push(`/dashboard/purchases/${purchase._id}/evaluation?selection=required`)}
+                        >
+                          Select Vendor
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="primary" 
+                          className="w-full"
+                          onClick={() => router.push(`/dashboard/purchases/${purchase._id}/evaluation`)}
+                        >
+                          Vendor Evaluation
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  
+                  {purchase.status.toLowerCase() === 'pending' && (
+                    <Button 
+                      variant="success" 
+                      className="w-full"
+                      onClick={() => router.push(`/dashboard/purchases/${purchase._id}/fulfill`)}
+                    >
+                      Fulfill Requirement
+                    </Button>
+                  )}
+                  
+                  {purchase.status.toLowerCase() === 'verification needed' && (
+                    <Button 
+                      variant="primary" 
+                      className="w-full"
+                      onClick={() => router.push(`/dashboard/purchases/${purchase._id}/verify`)}
+                    >
+                      Verify Purchase
+                    </Button>
+                  )}
+                  
+                  {purchase.status.toLowerCase() === 'vendor selected' && (
+                    <Button 
+                      variant="success" 
+                      className="w-full"
+                      onClick={handlePurchaseReceived}
+                      disabled={actionLoading}
+                    >
+                      {actionLoading ? 'Processing...' : 'Purchase Received'}
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Timeline */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">

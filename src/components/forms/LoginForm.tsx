@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import React, { ChangeEvent, FormEvent, useState } from "react";
@@ -7,7 +8,117 @@ import AuthApis from "@/actions/Apis/AuthApis";
 import { useRouter } from "next/navigation";
 import { setCookie } from "@/actions/CookieUtils";
 import { useUser } from "@/context/UserContext";
-import { AlertCircle, CheckCircle, X } from "lucide-react";
+import {
+  ShoppingCart,
+  Calendar,
+  Package,
+  Users,
+  Factory,
+  CheckCircle,
+  Truck,
+  RotateCcw,
+  FileText,
+  Home,
+  Settings,
+  MoreHorizontal,
+  User,
+  Wrench,
+  ClipboardList,
+  AlertCircle,
+  X
+} from "lucide-react";
+
+const allNavigationItems = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: <Home size={20} />,
+    href: "/dashboard",
+    requiredRoles: ["dashboard", "admin"],
+  },
+  {
+    id: 'orders',
+    label: 'Orders',
+    icon: <ShoppingCart size={20} />,
+    href: '/dashboard/orders',
+    requiredRoles: ["orders", "admin"],
+  },
+  {
+    id: 'store',
+    label: 'Store',
+    icon: <Package size={20} />,
+    href: '/dashboard/inventory',
+    requiredRoles: ["store_finished_goods", "store_raw_materials", "admin"],
+    children: [
+      { id: 'finished-goods', label: 'Finished Goods', icon: <Package size={16} />, href: '/dashboard/inventory/finished-goods', requiredRoles: ["store_finished_goods", "admin"] },
+      { id: 'raw-materials', label: 'Raw Materials', icon: <Package size={16} />, href: '/dashboard/inventory/materials', requiredRoles: ["store_raw_materials", "admin"] }
+    ]
+  },
+  {
+    id: 'purchase-request',
+    label: 'Purchase Request',
+    icon: <ClipboardList size={20} />,
+    href: '/dashboard/purchases',
+    requiredRoles: ["purchase_request", "admin"], 
+  },
+  {
+    id: 'vendors',
+    label: 'Vendors',
+    icon: <Users size={20} />,
+    href: '/dashboard/vendors',
+    requiredRoles: ["vendors", "admin"],
+  },
+  {
+    id: 'production',
+    label: 'Production',
+    icon: <Factory size={20} />,
+    href: '/dashboard/production',
+    requiredRoles: ["production_plans", "production_batch_mgt", "admin"],
+    children: [
+      { id: 'production-plans', label: 'Production plans', icon: <CheckCircle size={16} />, href: '/dashboard/planning', requiredRoles: ["production_plans", "admin"] },
+      { id: 'batch-management', label: 'Batch management', icon: <Factory size={16} />, href: '/dashboard/production', requiredRoles: ["production_batch_mgt", "admin"] }
+    ]
+  },
+  // {
+  //   id: 'dispatch',
+  //   label: 'Dispatch',
+  //   icon: <Truck size={20} />,
+  //   href: '/dashboard/dispatch',
+  //   requiredRoles: ["dispatch", "admin"],
+  // },
+  {
+    id: 'documents',
+    label: 'Documents',
+    icon: <FileText size={20} />,
+    href: '/dashboard/documents',
+    requiredRoles: ["documents", "admin"],
+  },
+  {
+    id: 'machinery',
+    label: 'Machinery',
+    icon: <Wrench size={20} />,
+    href: '/dashboard/machinery',
+    requiredRoles: ["machinery", "admin"],
+  },
+  {
+    id: 'report-n-complaint',
+    label: 'Report & Complaint',
+    icon: <FileText size={20} />,
+    href: '/dashboard/report',
+    requiredRoles: ["reports", "admin"],
+  },
+  {
+    id: 'personnel',
+    label: 'Personnel',
+    icon: <User size={20} />,
+    href: '/dashboard/personnel',
+    requiredRoles: ["personnel_team", "personnel_training", "admin"], 
+    children: [
+      { id: 'personnel-team', label: 'Team', icon: <Users size={16} />, href: '/dashboard/personnel/team', requiredRoles: ["personnel_team", "admin"] },
+      { id: 'training-plans', label: 'Training plans', icon: <Calendar size={16} />, href: '/dashboard/personnel/training-plan', requiredRoles: ["personnel_training", "admin"] }
+    ]
+  },
+];
 
 interface FormData {
   email: string;
@@ -42,7 +153,7 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
   const [successMessage, setSuccessMessage] = useState<string>("");
 
   const router = useRouter();
-  const { decodeAndSetUser } = useUser();
+  const { decodeAndSetUser, user } = useUser(); // Access user from context
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -151,6 +262,25 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
     setApiError("Login failed. Please try again.");
   };
 
+  const getRedirectPathBasedOnRole = (roles: string[]): string => {
+    // If the user is an admin, always go to the main dashboard
+    if (roles.includes("admin")) {
+      return "/dashboard";
+    }
+    
+    // Otherwise, find the page for their first role
+    const firstRole = roles[0];
+    console.log("User roles:", roles);
+    if (!firstRole) return "/dashboard";
+
+    // Flatten the navigation items to search for the correct path
+    const allNavItems = allNavigationItems.flatMap(item => [item, ...(item.children || [])]);
+    
+    const matchedItem = allNavItems.find(item => item.requiredRoles.includes(firstRole));
+
+    return matchedItem?.href || "/dashboard"; // Fallback to dashboard
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
@@ -193,19 +323,14 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
         }
 
         // Decode and set user
-        try {
-          decodeAndSetUser(res.data.token);
-        } catch (decodeError) {
-          console.error("Failed to decode user:", decodeError);
-          setApiError("Invalid authentication token. Please try again.");
-          setLoading(false);
-          return;
-        }
+        const decodedToken:any = decodeAndSetUser(res.data.token);
+        console.log("Decoded user:", decodedToken);
 
-        // Redirect based on user type
+        // Redirect based on user type and roles
         try {
           if (userType === "organization") {
-            router.push("/dashboard");
+            const redirectToPath = getRedirectPathBasedOnRole(decodedToken.roles || []);
+            router.push(redirectToPath);
           } else {
             router.push("/internal/organizations");
           }

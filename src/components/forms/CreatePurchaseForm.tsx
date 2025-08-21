@@ -1,5 +1,7 @@
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import Button from "@/components/ReusableComponents/Button";
 import PurchaseReqApis from "@/actions/Apis/PurchaseReqApis";
@@ -7,16 +9,13 @@ import MachineryApis from "@/actions/Apis/MachineryApis";
 import MachineryForm from "./MachineryForm";
 import MaterialsForm from "./MaterialsForm";
 
-// Define the purchase type options
 const PURCHASE_TYPES = {
   MATERIALS: "Material",
   MACHINERY: "Machinery",
   MISC: "Misc",
 };
 
-// TypeScript interface for machinery form data
 interface MachineryFormData {
-  // All machinery form fields as defined in MachineryForm component
   standard_type: string;
   discipline: string;
   group: string;
@@ -46,9 +45,9 @@ interface MachineryFormData {
   drift_in_standard: string;
   plan_type: string;
   maintenance_frequency: string;
+  documents: { document: string; name: string }[];
 }
 
-// TypeScript interface for misc item
 interface MiscItem {
   itemName: string;
   specifications: {
@@ -69,8 +68,8 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
   const [loading, setLoading] = useState<boolean>(initialLoading);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
+  const [initialMaterialIds, setInitialMaterialIds] = useState<string[]>([]);
 
-  // State for misc item
   const [currentMiscItem, setCurrentMiscItem] = useState<MiscItem>({
     itemName: "",
     specifications: [{ parameter: "", specification: "" }],
@@ -78,14 +77,24 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
 
   const router = useRouter();
   const { user } = useUser();
+  const searchParams = useSearchParams(); // Hook to read URL params
 
-  // Handle purchase type selection
+  // Effect to handle URL parameters on page load
+  useEffect(() => {
+    const type = searchParams.get('type');
+    const materialIds = searchParams.getAll('material');
+
+    if (type === 'material' && materialIds.length > 0) {
+      handleTypeSelection(PURCHASE_TYPES.MATERIALS);
+      setInitialMaterialIds(materialIds);
+    }
+  }, [searchParams]);
+
   const handleTypeSelection = (type: string) => {
     setPurchaseType(type);
     setShowTypeSelection(false);
   };
 
-  // Handle adding a specification row for misc items
   const addSpecification = () => {
     setCurrentMiscItem((prev) => ({
       ...prev,
@@ -96,7 +105,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
     }));
   };
 
-  // Handle removing a specification row
   const removeSpecification = (index: number) => {
     setCurrentMiscItem((prev) => ({
       ...prev,
@@ -104,7 +112,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
     }));
   };
 
-  // Update specification values
   const updateSpecification = (
     index: number,
     field: keyof { parameter: string; specification: string },
@@ -117,7 +124,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
     });
   };
 
-  // Update misc item field
   const updateMiscItem = (field: keyof MiscItem, value: string | any) => {
     setCurrentMiscItem((prev) => ({
       ...prev,
@@ -125,7 +131,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
     }));
   };
 
-  // Handle misc form submission
   const handleMiscSubmit = async () => {
     if (!currentMiscItem.itemName) {
       setError("Item name is required");
@@ -136,13 +141,11 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
     setError("");
 
     try {
-      // Format specifications array for API
       const formattedSpecs = currentMiscItem.specifications.map((spec) => ({
         param: spec.parameter,
         specificationValue: spec.specification,
       }));
 
-      // Prepare data for API
       const purchaseData = {
         purchaseRequestType: PURCHASE_TYPES.MISC,
         itemName: currentMiscItem.itemName,
@@ -150,14 +153,12 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
         org_id: user?.organizationId || "",
       };
 
-      // Call API to create purchase requirement
       const response = await PurchaseReqApis.createPurchaseRequirement(
         purchaseData
       );
 
       if (response.status === 200 || response.status === 201) {
         setSuccess("Misc purchase requirement created successfully!");
-        // Redirect after a delay
         setTimeout(() => {
           router.push("/dashboard/purchases");
         }, 2000);
@@ -178,7 +179,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
     }
   };
 
-  // Handle materials form submission
   const handleMaterialsSubmit = async (data: {
     materials: Array<{ materialId: string; quantity: number }>;
   }) => {
@@ -191,7 +191,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
     setError("");
 
     try {
-      // Prepare data for API
       const purchaseData = {
         purchaseRequestType: PURCHASE_TYPES.MATERIALS,
         materials: data.materials.map((item) => ({
@@ -201,14 +200,12 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
         org_id: user?.organizationId || "",
       };
 
-      // Call API to create purchase requirement
       const response = await PurchaseReqApis.createPurchaseRequirement(
         purchaseData
       );
 
       if (response.status === 200 || response.status === 201) {
         setSuccess("Material purchase requirement created successfully!");
-        // Redirect after a delay
         setTimeout(() => {
           router.push("/dashboard/purchases");
         }, 2000);
@@ -230,13 +227,11 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
     }
   };
 
-  // Handle machinery form submission
   const handleMachinerySubmit = async (machineryData: MachineryFormData) => {
     setLoading(true);
     setError("");
 
     try {
-      // First create the machinery record
       const machineryResponse = await MachineryApis.createMachinery({
         ...machineryData,
         org_id: user?.organizationId || "",
@@ -251,28 +246,24 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
         );
       }
 
-      // Get the machinery ID from the response
       const machineryId = machineryResponse.data.machinery._id;
 
       if (!machineryId) {
         throw new Error("No machinery ID returned from server");
       }
 
-      // Create a purchase requirement with the machinery ID
       const purchaseData = {
         purchaseRequestType: PURCHASE_TYPES.MACHINERY,
         machineryId,
         org_id: user?.organizationId || "",
       };
 
-      // Call API to create purchase requirement
       const purchaseResponse = await PurchaseReqApis.createPurchaseRequirement(
         purchaseData
       );
 
       if (purchaseResponse.status === 200 || purchaseResponse.status === 201) {
         setSuccess("Machinery purchase requirement created successfully!");
-        // Redirect after a delay
         setTimeout(() => {
           router.push("/dashboard/purchases");
         }, 2000);
@@ -294,7 +285,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
     }
   };
 
-  // If showing type selection
   if (showTypeSelection) {
     return (
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
@@ -310,7 +300,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
               onClick={() => handleTypeSelection(type)}
               className="flex flex-col items-center justify-center p-6 border-2 border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-500 transition-all"
             >
-              {/* Icon based on type */}
               <div className="w-16 h-16 flex items-center justify-center bg-blue-100 rounded-full mb-3">
                 {type === PURCHASE_TYPES.MATERIALS && (
                   <svg
@@ -374,7 +363,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
 
   return (
     <div>
-      {/* Header with success/error messages */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-800">
@@ -402,7 +390,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
           </button>
         </div>
 
-        {/* Success Message */}
         {success && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center">
@@ -424,7 +411,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
           </div>
         )}
 
-        {/* Error Message */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center">
@@ -447,17 +433,18 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
         )}
       </div>
 
-      {/* Machinery Form */}
       {purchaseType === PURCHASE_TYPES.MACHINERY && (
         <MachineryForm onSubmit={handleMachinerySubmit} loading={loading} />
       )}
 
-      {/* Materials Form */}
       {purchaseType === PURCHASE_TYPES.MATERIALS && (
-        <MaterialsForm onSubmit={handleMaterialsSubmit} loading={loading} />
+        <MaterialsForm
+          onSubmit={handleMaterialsSubmit}
+          loading={loading}
+          initialMaterialIds={initialMaterialIds}
+        />
       )}
 
-      {/* Misc Form */}
       {purchaseType === PURCHASE_TYPES.MISC && (
         <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
           <h3 className="text-lg font-medium mb-3 text-gray-700">
@@ -471,7 +458,7 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
             <input
               type="text"
               value={currentMiscItem.itemName}
-              onChange={(e) => updateMiscItem("itemName", e.target.value)}
+              onChange={(e) => updateMiscItem("itemName", e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
@@ -549,7 +536,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
             </button>
           </div>
 
-          {/* Submit button for Misc */}
           <div className="flex justify-end mt-6">
             <Button
               type="button"
@@ -564,7 +550,6 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
         </div>
       )}
 
-      {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-3">

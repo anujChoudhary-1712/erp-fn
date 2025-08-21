@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useState, useEffect } from 'react';
-import Button from '@/components/ReusableComponents/Button';
-import InputField from '@/components/ReusableComponents/InputField';
-import CategoryApis from '@/actions/Apis/CategoryApis';
-import DocumentUploadModal from '../modal/DocumentUploadModal';
-import { X, CheckCircle, Upload, FileText, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import Button from "@/components/ReusableComponents/Button";
+import InputField from "@/components/ReusableComponents/InputField";
+import CategoryApis from "@/actions/Apis/CategoryApis";
+import DocumentUploadModal from "../modal/DocumentUploadModal";
+import { X, CheckCircle, Upload, FileText, Trash2 } from "lucide-react";
 
 interface DocumentItem {
   name: string;
@@ -26,7 +26,12 @@ interface VendorFormData {
   phone_no: string;
   mail: string;
   website: string;
-  company_type: 'Proprietorship' | 'Partnership' | 'Private Limited' | 'Limited' | '';
+  company_type:
+    | "Proprietorship"
+    | "Partnership"
+    | "Private Limited"
+    | "Limited"
+    | "";
   partner_name: string;
   contact_person: string;
   contact_designation: string;
@@ -61,12 +66,36 @@ interface Category {
 }
 
 const INDIAN_STATES = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
-  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
-  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
-  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
-  'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu and Kashmir'
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Delhi",
+  "Jammu and Kashmir",
 ];
 
 const VendorForm: React.FC<VendorFormProps> = ({
@@ -74,51 +103,58 @@ const VendorForm: React.FC<VendorFormProps> = ({
   onSubmit,
   isLoading = false,
   submitButtonText = "Save Vendor",
-  title = "Vendor Registration"
+  title = "Vendor Registration",
 }) => {
   const [formData, setFormData] = useState<VendorFormData>({
-    approved_for: '',
-    company_name: '',
-    company_address: '',
-    state: '',
-    city: '',
-    pincode: '',
-    mobile_no: '',
-    phone_no: '',
-    mail: '',
-    website: '',
-    company_type: '',
-    partner_name: '',
-    contact_person: '',
-    contact_designation: '',
-    bank_name: '',
-    branch_name: '',
-    bank_ifsc: '',
-    bank_account_no: '',
-    bank_micr_code: '',
-    bank_swift_code: '',
-    gst_no: '',
-    pan_no: '',
+    approved_for: "",
+    company_name: "",
+    company_address: "",
+    state: "",
+    city: "",
+    pincode: "",
+    mobile_no: "",
+    phone_no: "",
+    mail: "",
+    website: "",
+    company_type: "",
+    partner_name: "",
+    contact_person: "",
+    contact_designation: "",
+    bank_name: "",
+    branch_name: "",
+    bank_ifsc: "",
+    bank_account_no: "",
+    bank_micr_code: "",
+    bank_swift_code: "",
+    gst_no: "",
+    pan_no: "",
     is_msme: false,
     reg_document_id: undefined,
     documents: [],
-    ...initialData
+    ...initialData,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isMsmeUploadModalOpen, setIsMsmeUploadModalOpen] = useState<boolean>(false);
-  const [isDocumentUploadModalOpen, setIsDocumentUploadModalOpen] = useState<boolean>(false);
+  const [isMsmeUploadModalOpen, setIsMsmeUploadModalOpen] =
+    useState<boolean>(false);
+  const [isDocumentUploadModalOpen, setIsDocumentUploadModalOpen] =
+    useState<boolean>(false);
   const [documentCategories, setDocumentCategories] = useState<string[]>([]);
-  const [isAddDocumentCategoryModalOpen, setIsAddDocumentCategoryModalOpen] = useState<boolean>(false);
-  const [newDocumentCategoryName, setNewDocumentCategoryName] = useState<string>("");
-  const [documentCategoryObject, setDocumentCategoryObject] = useState<Category | null>(null);
+  const [isAddDocumentCategoryModalOpen, setIsAddDocumentCategoryModalOpen] =
+    useState<boolean>(false);
+  const [newDocumentCategoryName, setNewDocumentCategoryName] =
+    useState<string>("");
+  const [documentCategoryObject, setDocumentCategoryObject] =
+    useState<Category | null>(null);
 
   useEffect(() => {
     const fetchCategories = async (): Promise<void> => {
       try {
         const res = await CategoryApis.getAllCategories();
         if (res.status === 200) {
-          const docCategory = res.data.find((cat: Category) => cat.type === "Document-Category");
+          const docCategory = res.data.find(
+            (cat: Category) => cat.type === "Document-Category"
+          );
           if (docCategory) {
             setDocumentCategories(docCategory.items);
             setDocumentCategoryObject(docCategory);
@@ -133,7 +169,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
-      setFormData(prev => ({ ...prev, ...initialData }));
+      setFormData((prev) => ({ ...prev, ...initialData }));
     }
   }, [initialData]);
 
@@ -141,7 +177,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
     if (formData.is_msme) {
       const newErrors = { ...errors };
       if (!formData.reg_document_id) {
-        newErrors.reg_document_id = 'MSME registration document is required.';
+        newErrors.reg_document_id = "MSME registration document is required.";
       } else {
         delete newErrors.reg_document_id;
       }
@@ -149,18 +185,21 @@ const VendorForm: React.FC<VendorFormProps> = ({
     }
   }, [formData.reg_document_id, formData.is_msme]);
 
-  const updateFormData = (field: keyof VendorFormData, value: string | boolean | undefined | DocumentItem[]): void => {
-    setFormData(prev => ({
+  const updateFormData = (
+    field: keyof VendorFormData,
+    value: string | boolean | undefined | DocumentItem[]
+  ): void => {
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
-    
+
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
 
-    if (field === 'is_msme' && value === false) {
-      setFormData(prev => ({ ...prev, reg_document_id: undefined }));
+    if (field === "is_msme" && value === false) {
+      setFormData((prev) => ({ ...prev, reg_document_id: undefined }));
     }
   };
 
@@ -168,73 +207,78 @@ const VendorForm: React.FC<VendorFormProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!formData.approved_for.trim()) {
-      newErrors.approved_for = 'Approval category is required';
+      newErrors.approved_for = "Approval category is required";
     }
     if (!formData.company_name.trim()) {
-      newErrors.company_name = 'Company name is required';
+      newErrors.company_name = "Company name is required";
     }
     if (!formData.company_address.trim()) {
-      newErrors.company_address = 'Company address is required';
+      newErrors.company_address = "Company address is required";
     }
     if (!formData.state.trim()) {
-      newErrors.state = 'State is required';
+      newErrors.state = "State is required";
     }
     if (!formData.city.trim()) {
-      newErrors.city = 'City is required';
+      newErrors.city = "City is required";
     }
     if (!formData.pincode.trim()) {
-      newErrors.pincode = 'Pin code is required';
+      newErrors.pincode = "Pin code is required";
     } else if (!/^\d{6}$/.test(formData.pincode)) {
-      newErrors.pincode = 'Pin code must be 6 digits';
+      newErrors.pincode = "Pin code must be 6 digits";
     }
     if (!formData.mobile_no.trim()) {
-      newErrors.mobile_no = 'Mobile number is required';
-    } else if (!/^\d{10}$/.test(formData.mobile_no.replace(/[^\d]/g, ''))) {
-      newErrors.mobile_no = 'Please enter a valid 10-digit mobile number';
+      newErrors.mobile_no = "Mobile number is required";
+    } else if (!/^\d{10}$/.test(formData.mobile_no.replace(/[^\d]/g, ""))) {
+      newErrors.mobile_no = "Please enter a valid 10-digit mobile number";
     }
     if (!formData.mail.trim()) {
-      newErrors.mail = 'Email address is required';
+      newErrors.mail = "Email address is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.mail)) {
-      newErrors.mail = 'Please enter a valid email address';
+      newErrors.mail = "Please enter a valid email address";
     }
     if (!formData.company_type) {
-      newErrors.company_type = 'Company type is required';
+      newErrors.company_type = "Company type is required";
     }
     if (!formData.contact_person.trim()) {
-      newErrors.contact_person = 'Contact person is required';
+      newErrors.contact_person = "Contact person is required";
     }
     if (!formData.contact_designation.trim()) {
-      newErrors.contact_designation = 'Contact designation is required';
+      newErrors.contact_designation = "Contact designation is required";
     }
     if (!formData.bank_name.trim()) {
-      newErrors.bank_name = 'Bank name is required';
+      newErrors.bank_name = "Bank name is required";
     }
     if (!formData.branch_name.trim()) {
-      newErrors.branch_name = 'Branch name is required';
+      newErrors.branch_name = "Branch name is required";
     }
     if (!formData.bank_ifsc.trim()) {
-      newErrors.bank_ifsc = 'IFSC code is required';
+      newErrors.bank_ifsc = "IFSC code is required";
     } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.bank_ifsc)) {
-      newErrors.bank_ifsc = 'Please enter a valid IFSC code';
+      newErrors.bank_ifsc = "Please enter a valid IFSC code";
     }
     if (!formData.bank_account_no.trim()) {
-      newErrors.bank_account_no = 'Bank account number is required';
+      newErrors.bank_account_no = "Bank account number is required";
     }
     if (!formData.gst_no.trim()) {
-      newErrors.gst_no = 'GST number is required';
-    } else if (!/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(formData.gst_no)) {
-      newErrors.gst_no = 'Please enter a valid GST number';
+      newErrors.gst_no = "GST number is required";
+    } else if (
+      !/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(
+        formData.gst_no
+      )
+    ) {
+      newErrors.gst_no = "Please enter a valid GST number";
     }
     if (!formData.pan_no.trim()) {
-      newErrors.pan_no = 'PAN number is required';
+      newErrors.pan_no = "PAN number is required";
     } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.pan_no)) {
-      newErrors.pan_no = 'Please enter a valid PAN number';
+      newErrors.pan_no = "Please enter a valid PAN number";
     }
     if (formData.is_msme && !formData.reg_document_id) {
-      newErrors.reg_document_id = 'MSME registration document is required.';
+      newErrors.reg_document_id = "MSME registration document is required.";
     }
     if (formData.website && !/^https?:\/\/.+/.test(formData.website)) {
-      newErrors.website = 'Please enter a valid website URL (with http:// or https://)';
+      newErrors.website =
+        "Please enter a valid website URL (with http:// or https://)";
     }
 
     setErrors(newErrors);
@@ -243,18 +287,18 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
-      const firstErrorField = Object.keys(errors).find(key => errors[key]);
+      const firstErrorField = Object.keys(errors).find((key) => errors[key]);
       if (firstErrorField) {
         const element = document.getElementById(firstErrorField);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }
       return;
     }
-    
+
     try {
       await onSubmit(formData);
     } catch (error) {
@@ -263,25 +307,29 @@ const VendorForm: React.FC<VendorFormProps> = ({
   };
 
   const handleMsmeDocumentUploadSuccess = (documentId: string) => {
-    updateFormData('reg_document_id', documentId);
+    updateFormData("reg_document_id", documentId);
     setIsMsmeUploadModalOpen(false);
   };
 
-  const handleDocumentUploadSuccess = (documentId: string, documentName: string, fileName?: string) => {
+  const handleDocumentUploadSuccess = (
+    documentId: string,
+    documentName: string,
+    fileName?: string
+  ) => {
     const newDocument: DocumentItem = {
       name: documentName,
       document: documentId,
       fileName: fileName,
-      uploadedAt: new Date().toISOString()
+      uploadedAt: new Date().toISOString(),
     };
-    
-    updateFormData('documents', [...formData.documents, newDocument]);
+
+    updateFormData("documents", [...formData.documents, newDocument]);
     setIsDocumentUploadModalOpen(false);
   };
 
   const handleRemoveDocument = (index: number) => {
     const updatedDocuments = formData.documents.filter((_, i) => i !== index);
-    updateFormData('documents', updatedDocuments);
+    updateFormData("documents", updatedDocuments);
   };
 
   const handleAddDocumentCategory = async () => {
@@ -292,13 +340,21 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
     try {
       if (documentCategoryObject) {
-        const updatedItems = [...documentCategoryObject.items, newDocumentCategoryName.trim()];
-        const res = await CategoryApis.updateCategories(documentCategoryObject._id, { items: updatedItems });
+        const updatedItems = [
+          ...documentCategoryObject.items,
+          newDocumentCategoryName.trim(),
+        ];
+        const res = await CategoryApis.updateCategories(
+          documentCategoryObject._id,
+          { items: updatedItems }
+        );
         if (res.status === 200) {
           alert(`Category "${newDocumentCategoryName}" added successfully!`);
           const updatedCategoriesRes = await CategoryApis.getAllCategories();
           if (updatedCategoriesRes.status === 200) {
-            const docCategory = updatedCategoriesRes.data.find((cat: Category) => cat.type === "Document-Category");
+            const docCategory = updatedCategoriesRes.data.find(
+              (cat: Category) => cat.type === "Document-Category"
+            );
             if (docCategory) {
               setDocumentCategories(docCategory.items);
               setDocumentCategoryObject(docCategory);
@@ -316,7 +372,9 @@ const VendorForm: React.FC<VendorFormProps> = ({
           alert(`Category "${newDocumentCategoryName}" added successfully!`);
           const updatedCategoriesRes = await CategoryApis.getAllCategories();
           if (updatedCategoriesRes.status === 200) {
-            const docCategory = updatedCategoriesRes.data.find((cat: Category) => cat.type === "Document-Category");
+            const docCategory = updatedCategoriesRes.data.find(
+              (cat: Category) => cat.type === "Document-Category"
+            );
             if (docCategory) {
               setDocumentCategories(docCategory.items);
               setDocumentCategoryObject(docCategory);
@@ -335,32 +393,52 @@ const VendorForm: React.FC<VendorFormProps> = ({
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">{title}</h1>
-      
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Company Information */}
         <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Company Information</h2>
-          
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            Company Information
+          </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <InputField
-                label="Approved For"
-                value={formData.approved_for}
-                onChange={(e) => updateFormData('approved_for', e.target.value)}
-                placeholder="Enter approval category"
-                required
-                error={errors.approved_for}
+              <label
+                htmlFor="approved_for"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Approved For <span className="text-red-500">*</span>
+              </label>
+              <select
                 id="approved_for"
-              />
+                value={formData.approved_for}
+                onChange={(e) => updateFormData("approved_for", e.target.value)}
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.approved_for ? "border-red-500" : "border-gray-300"
+                }`}
+                required
+              >
+                <option value="">-- Select a category --</option>
+                {["Machinery", "Material", "Miscellaneous"].map((category) => (
+                  <option key={category} value={category.toLowerCase()}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              {errors.approved_for && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.approved_for}
+                </p>
+              )}
             </div>
-            
+
             <div></div>
-            
+
             <div className="md:col-span-2">
               <InputField
                 label="Company Name"
                 value={formData.company_name}
-                onChange={(e) => updateFormData('company_name', e.target.value)}
+                onChange={(e) => updateFormData("company_name", e.target.value)}
                 placeholder="Enter company name"
                 required
                 error={errors.company_name}
@@ -374,17 +452,21 @@ const VendorForm: React.FC<VendorFormProps> = ({
               </label>
               <textarea
                 value={formData.company_address}
-                onChange={(e) => updateFormData('company_address', e.target.value)}
+                onChange={(e) =>
+                  updateFormData("company_address", e.target.value)
+                }
                 placeholder="Enter complete company address"
                 className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.company_address ? 'border-red-500' : 'border-gray-300'
+                  errors.company_address ? "border-red-500" : "border-gray-300"
                 }`}
                 rows={3}
                 required
                 id="company_address"
               />
               {errors.company_address && (
-                <p className="mt-1 text-sm text-red-600">{errors.company_address}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.company_address}
+                </p>
               )}
             </div>
 
@@ -394,16 +476,18 @@ const VendorForm: React.FC<VendorFormProps> = ({
               </label>
               <select
                 value={formData.state}
-                onChange={(e) => updateFormData('state', e.target.value)}
+                onChange={(e) => updateFormData("state", e.target.value)}
                 className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.state ? 'border-red-500' : 'border-gray-300'
+                  errors.state ? "border-red-500" : "border-gray-300"
                 }`}
                 required
                 id="state"
               >
                 <option value="">-- Please select --</option>
                 {INDIAN_STATES.map((state) => (
-                  <option key={state} value={state}>{state}</option>
+                  <option key={state} value={state}>
+                    {state}
+                  </option>
                 ))}
               </select>
               {errors.state && (
@@ -414,7 +498,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="City"
               value={formData.city}
-              onChange={(e) => updateFormData('city', e.target.value)}
+              onChange={(e) => updateFormData("city", e.target.value)}
               placeholder="Enter city"
               required
               error={errors.city}
@@ -424,7 +508,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Pin Code"
               value={formData.pincode}
-              onChange={(e) => updateFormData('pincode', e.target.value)}
+              onChange={(e) => updateFormData("pincode", e.target.value)}
               placeholder="Enter pin code"
               required
               error={errors.pincode}
@@ -435,7 +519,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Mobile No"
               value={formData.mobile_no}
-              onChange={(e) => updateFormData('mobile_no', e.target.value)}
+              onChange={(e) => updateFormData("mobile_no", e.target.value)}
               placeholder="Enter mobile number"
               required
               error={errors.mobile_no}
@@ -446,7 +530,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Phone No"
               value={formData.phone_no}
-              onChange={(e) => updateFormData('phone_no', e.target.value)}
+              onChange={(e) => updateFormData("phone_no", e.target.value)}
               placeholder="Enter phone number"
               type="tel"
             />
@@ -454,7 +538,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Email Id"
               value={formData.mail}
-              onChange={(e) => updateFormData('mail', e.target.value)}
+              onChange={(e) => updateFormData("mail", e.target.value)}
               placeholder="Enter email address"
               required
               error={errors.mail}
@@ -465,7 +549,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Website"
               value={formData.website}
-              onChange={(e) => updateFormData('website', e.target.value)}
+              onChange={(e) => updateFormData("website", e.target.value)}
               placeholder="https://example.com"
               error={errors.website}
               type="url"
@@ -473,18 +557,30 @@ const VendorForm: React.FC<VendorFormProps> = ({
           </div>
 
           <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-4" id="company_type">
+            <label
+              className="block text-sm font-medium text-gray-700 mb-4"
+              id="company_type"
+            >
               Company Type <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {(['Proprietorship', 'Partnership', 'Private Limited', 'Limited'] as const).map((type) => (
+              {(
+                [
+                  "Proprietorship",
+                  "Partnership",
+                  "Private Limited",
+                  "Limited",
+                ] as const
+              ).map((type) => (
                 <label key={type} className="flex items-center">
                   <input
                     type="radio"
                     name="company_type"
                     value={type}
                     checked={formData.company_type === type}
-                    onChange={(e) => updateFormData('company_type', e.target.value)}
+                    onChange={(e) =>
+                      updateFormData("company_type", e.target.value)
+                    }
                     className="mr-2 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-sm text-gray-700">{type}</span>
@@ -500,14 +596,14 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Name of Partner/Directors"
               value={formData.partner_name}
-              onChange={(e) => updateFormData('partner_name', e.target.value)}
+              onChange={(e) => updateFormData("partner_name", e.target.value)}
               placeholder="Enter partner/director names"
             />
 
             <InputField
               label="Contact Person"
               value={formData.contact_person}
-              onChange={(e) => updateFormData('contact_person', e.target.value)}
+              onChange={(e) => updateFormData("contact_person", e.target.value)}
               placeholder="Enter contact person name"
               required
               error={errors.contact_person}
@@ -518,7 +614,9 @@ const VendorForm: React.FC<VendorFormProps> = ({
               <InputField
                 label="Contact Designation"
                 value={formData.contact_designation}
-                onChange={(e) => updateFormData('contact_designation', e.target.value)}
+                onChange={(e) =>
+                  updateFormData("contact_designation", e.target.value)
+                }
                 placeholder="Enter contact person designation"
                 required
                 error={errors.contact_designation}
@@ -530,13 +628,15 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
         {/* Banking Details */}
         <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Banking Details</h2>
-          
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            Banking Details
+          </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <InputField
               label="Bank Name"
               value={formData.bank_name}
-              onChange={(e) => updateFormData('bank_name', e.target.value)}
+              onChange={(e) => updateFormData("bank_name", e.target.value)}
               placeholder="Enter bank name"
               required
               error={errors.bank_name}
@@ -546,7 +646,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Branch Name"
               value={formData.branch_name}
-              onChange={(e) => updateFormData('branch_name', e.target.value)}
+              onChange={(e) => updateFormData("branch_name", e.target.value)}
               placeholder="Enter branch name"
               required
               error={errors.branch_name}
@@ -556,7 +656,9 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Bank Account Number"
               value={formData.bank_account_no}
-              onChange={(e) => updateFormData('bank_account_no', e.target.value)}
+              onChange={(e) =>
+                updateFormData("bank_account_no", e.target.value)
+              }
               placeholder="Enter account number"
               required
               error={errors.bank_account_no}
@@ -566,7 +668,9 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Bank IFSC Code"
               value={formData.bank_ifsc}
-              onChange={(e) => updateFormData('bank_ifsc', e.target.value.toUpperCase())}
+              onChange={(e) =>
+                updateFormData("bank_ifsc", e.target.value.toUpperCase())
+              }
               placeholder="Enter IFSC code"
               required
               error={errors.bank_ifsc}
@@ -577,14 +681,16 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="Bank MICR Code"
               value={formData.bank_micr_code}
-              onChange={(e) => updateFormData('bank_micr_code', e.target.value)}
+              onChange={(e) => updateFormData("bank_micr_code", e.target.value)}
               placeholder="Enter MICR code"
             />
 
             <InputField
               label="SWIFT Code"
               value={formData.bank_swift_code}
-              onChange={(e) => updateFormData('bank_swift_code', e.target.value.toUpperCase())}
+              onChange={(e) =>
+                updateFormData("bank_swift_code", e.target.value.toUpperCase())
+              }
               placeholder="Enter SWIFT code"
             />
           </div>
@@ -592,13 +698,17 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
         {/* GST Registration Details */}
         <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">GST Registration Details</h2>
-          
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            GST Registration Details
+          </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <InputField
               label="GST NUMBER"
               value={formData.gst_no}
-              onChange={(e) => updateFormData('gst_no', e.target.value.toUpperCase())}
+              onChange={(e) =>
+                updateFormData("gst_no", e.target.value.toUpperCase())
+              }
               placeholder="Enter GST number"
               required
               error={errors.gst_no}
@@ -609,7 +719,9 @@ const VendorForm: React.FC<VendorFormProps> = ({
             <InputField
               label="PAN NO."
               value={formData.pan_no}
-              onChange={(e) => updateFormData('pan_no', e.target.value.toUpperCase())}
+              onChange={(e) =>
+                updateFormData("pan_no", e.target.value.toUpperCase())
+              }
               placeholder="Enter PAN number"
               required
               error={errors.pan_no}
@@ -620,13 +732,15 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
           <div className="mt-6">
             <div className="flex items-center space-x-6">
-              <span className="text-sm font-medium text-gray-700">ARE YOU AN MSME UNIT?</span>
+              <span className="text-sm font-medium text-gray-700">
+                ARE YOU AN MSME UNIT?
+              </span>
               <label className="flex items-center">
                 <input
                   type="radio"
                   name="is_msme"
                   checked={formData.is_msme === true}
-                  onChange={() => updateFormData('is_msme', true)}
+                  onChange={() => updateFormData("is_msme", true)}
                   className="mr-2 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700">Yes</span>
@@ -636,7 +750,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                   type="radio"
                   name="is_msme"
                   checked={formData.is_msme === false}
-                  onChange={() => updateFormData('is_msme', false)}
+                  onChange={() => updateFormData("is_msme", false)}
                   className="mr-2 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700">NO</span>
@@ -645,8 +759,12 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
             {formData.is_msme && (
               <div className="mt-4 max-w-md">
-                <label className="block text-sm font-medium text-gray-700 mb-2" id="reg_document_id">
-                  MSME Registration Document <span className="text-red-500">*</span>
+                <label
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                  id="reg_document_id"
+                >
+                  MSME Registration Document{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center space-x-2">
                   <Button
@@ -655,7 +773,9 @@ const VendorForm: React.FC<VendorFormProps> = ({
                     onClick={() => setIsMsmeUploadModalOpen(true)}
                     className="px-4 py-2"
                   >
-                    {formData.reg_document_id ? "Change Document" : "Upload Document"}
+                    {formData.reg_document_id
+                      ? "Change Document"
+                      : "Upload Document"}
                   </Button>
                   {formData.reg_document_id && (
                     <span className="text-sm text-green-600 flex items-center gap-1">
@@ -664,7 +784,9 @@ const VendorForm: React.FC<VendorFormProps> = ({
                   )}
                 </div>
                 {errors.reg_document_id && (
-                  <p className="mt-1 text-sm text-red-600">{errors.reg_document_id}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.reg_document_id}
+                  </p>
                 )}
               </div>
             )}
@@ -674,7 +796,9 @@ const VendorForm: React.FC<VendorFormProps> = ({
         {/* Documents Section */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Additional Documents</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Additional Documents
+            </h2>
             <Button
               type="button"
               variant="primary"
@@ -710,7 +834,9 @@ const VendorForm: React.FC<VendorFormProps> = ({
                   <div className="flex items-center space-x-3">
                     <FileText className="h-5 w-5 text-blue-500" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {doc.name}
+                      </p>
                       {doc.fileName && (
                         <p className="text-xs text-gray-500">{doc.fileName}</p>
                       )}
@@ -722,7 +848,6 @@ const VendorForm: React.FC<VendorFormProps> = ({
                     </span>
                     <Button
                       type="button"
-                      variant="ghost"
                       onClick={() => handleRemoveDocument(index)}
                       className="p-1 text-red-600 hover:text-red-800"
                     >
@@ -742,7 +867,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
             disabled={isLoading}
             className="min-w-32"
           >
-            {isLoading ? 'Saving...' : submitButtonText}
+            {isLoading ? "Saving..." : submitButtonText}
           </Button>
         </div>
       </form>
@@ -751,12 +876,6 @@ const VendorForm: React.FC<VendorFormProps> = ({
         isOpen={isMsmeUploadModalOpen}
         onClose={() => setIsMsmeUploadModalOpen(false)}
         onUploadSuccess={handleMsmeDocumentUploadSuccess}
-        documentCategories={documentCategories}
-        isAddingCategory={isAddDocumentCategoryModalOpen}
-        onAddCategory={() => setIsAddDocumentCategoryModalOpen(prev => !prev)}
-        onNewCategoryNameChange={setNewDocumentCategoryName}
-        onAddCategorySubmit={handleAddDocumentCategory}
-        newCategoryName={newDocumentCategoryName}
         uploadType="msme"
       />
 
@@ -764,12 +883,6 @@ const VendorForm: React.FC<VendorFormProps> = ({
         isOpen={isDocumentUploadModalOpen}
         onClose={() => setIsDocumentUploadModalOpen(false)}
         onUploadSuccess={handleDocumentUploadSuccess}
-        documentCategories={documentCategories}
-        isAddingCategory={isAddDocumentCategoryModalOpen}
-        onAddCategory={() => setIsAddDocumentCategoryModalOpen(prev => !prev)}
-        onNewCategoryNameChange={setNewDocumentCategoryName}
-        onAddCategorySubmit={handleAddDocumentCategory}
-        newCategoryName={newDocumentCategoryName}
         uploadType="general"
       />
     </div>

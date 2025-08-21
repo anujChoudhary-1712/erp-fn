@@ -32,6 +32,7 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
           type={type}
           placeholder={placeholder}
           required={required}
+          autoComplete="off"
           className={`w-full px-3 py-2 border rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 ${
             error 
               ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
