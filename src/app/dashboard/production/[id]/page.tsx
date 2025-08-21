@@ -410,7 +410,7 @@ const SingleManufacturingBatchPage = ({ params }: { params: { id: string } }) =>
           <div className="space-y-3">
             {pendingReworkItems.map(item => (
               <div key={item._id} className="p-3 bg-white rounded-md border flex justify-between items-center">
-                <div><p className="font-medium text-gray-800">{item.quantity} units from "{item.stage_name}"</p><p className="text-sm text-gray-600">Reason: {item.reason}</p></div>
+                <div><p className="font-medium text-gray-800">{item.quantity} units from &quot;{item.stage_name}&quot;</p><p className="text-sm text-gray-600">Reason: {item.reason}</p></div>
                 <Button variant="warning" size="sm" onClick={() => handleOpenResolveReworkModal(item)}>Resolve</Button>
               </div>
             ))}
