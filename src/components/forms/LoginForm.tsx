@@ -25,7 +25,7 @@ import {
   Wrench,
   ClipboardList,
   AlertCircle,
-  X
+  X,
 } from "lucide-react";
 
 const allNavigationItems = [
@@ -37,47 +37,71 @@ const allNavigationItems = [
     requiredRoles: ["dashboard", "admin"],
   },
   {
-    id: 'orders',
-    label: 'Orders',
+    id: "orders",
+    label: "Orders",
     icon: <ShoppingCart size={20} />,
-    href: '/dashboard/orders',
+    href: "/dashboard/orders",
     requiredRoles: ["orders", "admin"],
   },
   {
-    id: 'store',
-    label: 'Store',
+    id: "store",
+    label: "Store",
     icon: <Package size={20} />,
-    href: '/dashboard/inventory',
+    href: "/dashboard/inventory",
     requiredRoles: ["store_finished_goods", "store_raw_materials", "admin"],
     children: [
-      { id: 'finished-goods', label: 'Finished Goods', icon: <Package size={16} />, href: '/dashboard/inventory/finished-goods', requiredRoles: ["store_finished_goods", "admin"] },
-      { id: 'raw-materials', label: 'Raw Materials', icon: <Package size={16} />, href: '/dashboard/inventory/materials', requiredRoles: ["store_raw_materials", "admin"] }
-    ]
+      {
+        id: "finished-goods",
+        label: "Finished Goods",
+        icon: <Package size={16} />,
+        href: "/dashboard/inventory/finished-goods",
+        requiredRoles: ["store_finished_goods", "admin"],
+      },
+      {
+        id: "raw-materials",
+        label: "Raw Materials",
+        icon: <Package size={16} />,
+        href: "/dashboard/inventory/materials",
+        requiredRoles: ["store_raw_materials", "admin"],
+      },
+    ],
   },
   {
-    id: 'purchase-request',
-    label: 'Purchase Request',
+    id: "purchase-request",
+    label: "Purchase Request",
     icon: <ClipboardList size={20} />,
-    href: '/dashboard/purchases',
-    requiredRoles: ["purchase_request", "admin"], 
+    href: "/dashboard/purchases",
+    requiredRoles: ["purchase_request", "admin"],
   },
   {
-    id: 'vendors',
-    label: 'Vendors',
+    id: "vendors",
+    label: "Vendors",
     icon: <Users size={20} />,
-    href: '/dashboard/vendors',
+    href: "/dashboard/vendors",
     requiredRoles: ["vendors", "admin"],
   },
   {
-    id: 'production',
-    label: 'Production',
+    id: "production",
+    label: "Production",
     icon: <Factory size={20} />,
-    href: '/dashboard/production',
+    href: "/dashboard/production",
     requiredRoles: ["production_plans", "production_batch_mgt", "admin"],
     children: [
-      { id: 'production-plans', label: 'Production plans', icon: <CheckCircle size={16} />, href: '/dashboard/planning', requiredRoles: ["production_plans", "admin"] },
-      { id: 'batch-management', label: 'Batch management', icon: <Factory size={16} />, href: '/dashboard/production', requiredRoles: ["production_batch_mgt", "admin"] }
-    ]
+      {
+        id: "production-plans",
+        label: "Production plans",
+        icon: <CheckCircle size={16} />,
+        href: "/dashboard/planning",
+        requiredRoles: ["production_plans", "admin"],
+      },
+      {
+        id: "batch-management",
+        label: "Batch management",
+        icon: <Factory size={16} />,
+        href: "/dashboard/production",
+        requiredRoles: ["production_batch_mgt", "admin"],
+      },
+    ],
   },
   // {
   //   id: 'dispatch',
@@ -87,36 +111,48 @@ const allNavigationItems = [
   //   requiredRoles: ["dispatch", "admin"],
   // },
   {
-    id: 'documents',
-    label: 'Documents',
+    id: "documents",
+    label: "Documents",
     icon: <FileText size={20} />,
-    href: '/dashboard/documents',
+    href: "/dashboard/documents",
     requiredRoles: ["documents", "admin"],
   },
   {
-    id: 'machinery',
-    label: 'Machinery',
+    id: "machinery",
+    label: "Machinery",
     icon: <Wrench size={20} />,
-    href: '/dashboard/machinery',
+    href: "/dashboard/machinery",
     requiredRoles: ["machinery", "admin"],
   },
   {
-    id: 'report-n-complaint',
-    label: 'Report & Complaint',
+    id: "report-n-complaint",
+    label: "Report & Complaint",
     icon: <FileText size={20} />,
-    href: '/dashboard/report',
+    href: "/dashboard/report",
     requiredRoles: ["reports", "admin"],
   },
   {
-    id: 'personnel',
-    label: 'Personnel',
+    id: "personnel",
+    label: "Personnel",
     icon: <User size={20} />,
-    href: '/dashboard/personnel',
-    requiredRoles: ["personnel_team", "personnel_training", "admin"], 
+    href: "/dashboard/personnel",
+    requiredRoles: ["personnel_team", "personnel_training", "admin"],
     children: [
-      { id: 'personnel-team', label: 'Team', icon: <Users size={16} />, href: '/dashboard/personnel/team', requiredRoles: ["personnel_team", "admin"] },
-      { id: 'training-plans', label: 'Training plans', icon: <Calendar size={16} />, href: '/dashboard/personnel/training-plan', requiredRoles: ["personnel_training", "admin"] }
-    ]
+      {
+        id: "personnel-team",
+        label: "Team",
+        icon: <Users size={16} />,
+        href: "/dashboard/personnel/team",
+        requiredRoles: ["personnel_team", "admin"],
+      },
+      {
+        id: "training-plans",
+        label: "Training plans",
+        icon: <Calendar size={16} />,
+        href: "/dashboard/personnel/training-plan",
+        requiredRoles: ["personnel_training", "admin"],
+      },
+    ],
   },
 ];
 
@@ -203,7 +239,7 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
     // Handle different types of API errors
     if (error.response?.data) {
       const { data } = error.response;
-      
+
       // Handle field-specific errors
       if (data.errors) {
         setErrors(data.errors);
@@ -220,7 +256,9 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
     if (error.response?.status) {
       switch (error.response.status) {
         case 400:
-          setApiError("Invalid email or password. Please check your credentials.");
+          setApiError(
+            "Invalid email or password. Please check your credentials."
+          );
           break;
         case 401:
           setApiError("Invalid email or password. Please try again.");
@@ -238,7 +276,9 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
           setApiError("Server error. Please try again later.");
           break;
         case 503:
-          setApiError("Service temporarily unavailable. Please try again later.");
+          setApiError(
+            "Service temporarily unavailable. Please try again later."
+          );
           break;
         default:
           setApiError("An unexpected error occurred. Please try again.");
@@ -267,23 +307,28 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
     if (roles.includes("admin")) {
       return "/dashboard";
     }
-    
+
     // Otherwise, find the page for their first role
     const firstRole = roles[0];
     console.log("User roles:", roles);
     if (!firstRole) return "/dashboard";
 
     // Flatten the navigation items to search for the correct path
-    const allNavItems = allNavigationItems.flatMap(item => [item, ...(item.children || [])]);
-    
-    const matchedItem = allNavItems.find(item => item.requiredRoles.includes(firstRole));
+    const allNavItems = allNavigationItems.flatMap((item) => [
+      item,
+      ...(item.children || []),
+    ]);
+
+    const matchedItem = allNavItems.find((item) =>
+      item.requiredRoles.includes(firstRole)
+    );
 
     return matchedItem?.href || "/dashboard"; // Fallback to dashboard
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     // Clear previous messages
     setApiError("");
     setSuccessMessage("");
@@ -304,7 +349,7 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
 
       if (res.status === 200) {
         console.log("Login successful:", res.data);
-        
+
         // Show success message
         setSuccessMessage("Login successful! Redirecting...");
 
@@ -323,13 +368,15 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
         }
 
         // Decode and set user
-        const decodedToken:any = decodeAndSetUser(res.data.token);
+        const decodedToken: any = decodeAndSetUser(res.data.token);
         console.log("Decoded user:", decodedToken);
 
         // Redirect based on user type and roles
         try {
           if (userType === "organization") {
-            const redirectToPath = getRedirectPathBasedOnRole(decodedToken.roles || []);
+            const redirectToPath = getRedirectPathBasedOnRole(
+              decodedToken.roles || []
+            );
             router.push(redirectToPath);
           } else {
             router.push("/internal/organizations");
@@ -340,10 +387,12 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
           setLoading(false);
           return;
         }
-
       } else {
-        // Handle unexpected successful response
-        setApiError("Unexpected response from server. Please try again.");
+        if (res.status === 401) {
+          setApiError("Invalid email or password. Please try again.");
+        } else {
+          setApiError("Unexpected response from server. Please try again.");
+        }
       }
     } catch (error) {
       console.log("Login error:", error);
@@ -362,7 +411,7 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
     <div className="min-h-screen bg-gray-50 py-8 flex justify-center items-center">
       <div className="bg-white p-6 rounded-lg shadow-md min-w-[300px] w-10/12 max-w-[500px]">
         <h2 className="text-xl font-semibold mb-6 text-center">Login</h2>
-        
+
         {/* Success Message */}
         {successMessage && (
           <div className="mb-4 p-4 rounded-md bg-green-50 border border-green-200 flex items-start">

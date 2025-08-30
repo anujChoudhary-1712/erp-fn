@@ -3,7 +3,7 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { getCookie, removeCookie, setCookie } from "./CookieUtils";
 
-export const APIBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+export const APIBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api";
 
 // Create a custom axios instance
 const axiosInstance = axios.create({
