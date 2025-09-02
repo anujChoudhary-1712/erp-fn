@@ -390,7 +390,9 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
       } else {
         if (res.status === 401) {
           setApiError("Invalid email or password. Please try again.");
-        } else {
+        } else if (res.status === 403){
+          setApiError("Access denied. Your account may be deactivated.");
+        }else {
           setApiError("Unexpected response from server. Please try again.");
         }
       }

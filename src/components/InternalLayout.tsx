@@ -4,6 +4,7 @@ import Sidebar from './ReusableComponents/Sidebar';
 import MobileNavigation from './ReusableComponents/MobileNavigation';
 import { 
   Building2,
+  Users,
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
@@ -14,6 +15,12 @@ const navigationItems = [
     label: 'Organizations',
     icon: <Building2 size={20} />,
     href: '/internal/organizations'
+  },
+  {
+    id: 'users',
+    label: 'Users',
+    icon: <Users size={20} />,
+    href: '/internal/users'
   }
 ];
 
@@ -24,6 +31,13 @@ const mainTabItems = [
     label: 'Organizations',
     icon: <Building2 size={20} />,
     href: '/internal/organizations',
+    badge: 12
+  },
+  {
+    id: 'users',
+    label: 'Users',
+    icon: <Users size={20} />,
+    href: '/internal/users',
     badge: 12
   }
 ];

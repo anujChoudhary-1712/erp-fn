@@ -6,7 +6,7 @@ import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import NotificationApis from "@/actions/Apis/NotificationApis";
 import Image from "next/image";
-import logo from "../../../public/images/logo.png"
+import proscaLogo from "../../../public/images/logo.png"
 
 interface NavItem {
   id: string;
@@ -21,6 +21,7 @@ interface SidebarProps {
   currentPath?: string;
   className?: string;
   userType: "internal" | "organization";
+  logoSrc?: string;
 }
 
 interface Notification {
@@ -44,6 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   currentPath = "/",
   className = "",
   userType,
+  logoSrc
 }) => {
   const [expandedItems, setExpandedItems] = useState<string[]>(["production"]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -212,7 +214,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Image
-                src={logo}
+                src={logoSrc ? logoSrc : proscaLogo}
                 alt="Prosca Logo"
                 width={32}
                 height={32}
