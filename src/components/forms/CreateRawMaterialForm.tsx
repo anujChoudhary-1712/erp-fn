@@ -1,6 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
+import CategoryApis from "@/actions/Apis/CategoryApis";
 
 // Interfaces for the raw material data structure
 export interface VerificationParameter {
@@ -29,6 +30,12 @@ export interface RawMaterialData {
   dimensions: Dimension[];
   total_area?: number;
   usage_area?: number;
+}
+
+interface Category {
+  _id: string;
+  type: string;
+  items: string[];
 }
 
 // Props interface for the component
@@ -73,6 +80,9 @@ const CreateRawMaterialForm: React.FC<CreateRawMaterialFormProps> = ({
   
   // New state to hold the value of the "Other" category input
   const [otherCategoryValue, setOtherCategoryValue] = useState("");
+  const [rawMaterialCategories, setRawMaterialCategories] = useState<string[]>([]);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState<boolean>(true);
+
 
   // Temporary states for adding single items
   const [tempParameter, setTempParameter] = useState<VerificationParameter>({
@@ -89,6 +99,31 @@ const CreateRawMaterialForm: React.FC<CreateRawMaterialFormProps> = ({
   useEffect(() => {
     setCurrentMaterial((prev) => ({ ...prev, product_id: productId }));
   }, [productId]);
+
+  // Effect to fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setIsCategoriesLoading(true);
+      try {
+        const res = await CategoryApis.getAllCategories();
+        if (res.status === 200) {
+          const rawMaterialCategory = res.data.find(
+            (cat: Category) => cat.type === "Raw Material Category"
+          );
+          if (rawMaterialCategory) {
+            setRawMaterialCategories([...rawMaterialCategory.items, "other"]);
+          } else {
+            setRawMaterialCategories([]);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      } finally {
+        setIsCategoriesLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Function to calculate area when length and width dimensions are present
   const calculateArea = (
@@ -309,22 +344,23 @@ const CreateRawMaterialForm: React.FC<CreateRawMaterialFormProps> = ({
                 <label className="block text-sm font-medium mb-2 text-gray-700">
                   Category <span className="text-red-500 ml-1">*</span>
                 </label>
-                <select
-                  value={currentMaterial.category}
-                  onChange={(e) => handleMaterialChange("category", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select category</option>
-                  <option value="fabric">Fabric</option>
-                  <option value="thread">Thread</option>
-                  <option value="button">Button</option>
-                  <option value="zipper">Zipper</option>
-                  <option value="accessory">Accessory</option>
-                  <option value="hardware">Hardware</option>
-                  <option value="packaging">Packaging</option>
-                  <option value="other">Other</option>
-                </select>
+                {isCategoriesLoading ? (
+                  <p className="text-gray-500">Loading categories...</p>
+                ) : (
+                  <select
+                    value={currentMaterial.category}
+                    onChange={(e) => handleMaterialChange("category", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Select category</option>
+                    {rawMaterialCategories.map((category, index) => (
+                      <option key={index} value={category}>
+                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 {currentMaterial.category === "other" && (
                   <input
                     type="text"

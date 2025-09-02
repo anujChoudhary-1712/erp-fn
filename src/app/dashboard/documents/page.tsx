@@ -10,6 +10,7 @@ import {
   File,
 } from "lucide-react";
 import DocumentCard from "@/components/DocumentCard";
+import CategoryApis from "@/actions/Apis/CategoryApis";
 
 export interface Document {
   _id: string;
@@ -50,6 +51,12 @@ interface FetchedDocumentObject {
   __v: number;
 }
 
+interface Category {
+  _id: string;
+  type: string;
+  items: string[];
+}
+
 type ModalMode = "upload" | "amend" | null;
 type ActiveTab = "active" | "obsolete";
 
@@ -69,22 +76,32 @@ const DocumentsPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  
+  // State for dynamic categories
+  const [documentCategories, setDocumentCategories] = useState<string[]>(["Others"]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Static document categories based on the image
-  const documentCategories = [
-    "Lab Personnel",
-    "Organization",
-    "Management Procedures",
-    "Calibration / Testing Procedures",
-    "Traceability Certificates",
-    "External Standards",
-    "Instruction Manuals",
-    "External ILC / PT Record",
-    "Purchase Records",
-    "Others"
-  ];
+  // Function to fetch and set document categories
+  const fetchCategories = async (): Promise<void> => {
+    try {
+      const res = await CategoryApis.getAllCategories();
+      if (res.status === 200) {
+        const docCategory = res.data.find(
+          (cat: Category) => cat.type === "Document Category"
+        );
+        if (docCategory) {
+          setDocumentCategories([...docCategory.items, "Others"]);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
