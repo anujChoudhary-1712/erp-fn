@@ -30,13 +30,13 @@ interface ManufacturingBatch {
 }
 
 const ManufacturingBatchesPage: React.FC = () => {
-  const [batches, setBatches] = useState<ManufacturingBatch[]>([]);
+  const [allBatches, setAllBatches] = useState<ManufacturingBatch[]>([]);
   const [filteredBatches, setFilteredBatches] = useState<ManufacturingBatch[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const router = useRouter();
 
-  // Debounce search to avoid too many API calls
+  // Debounce search to avoid too many operations
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
 
   useEffect(() => {
@@ -47,68 +47,66 @@ const ManufacturingBatchesPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const fetchBatches = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Option 1: If API supports search
-      const params = debouncedSearchTerm ? { batch_number: debouncedSearchTerm } : {};
-      const response = await ManufacturingBatchApis.getAllManufacturingBatches(params);
-      
-      console.log("API Response:", response); // Debug log
-      
-      if (response.status === 200) {
-        setBatches(response.data.batches || []);
-        setFilteredBatches(response.data.batches || []);
-      }
-    } catch (error) {
-      console.error("Error fetching batches:", error);
-      setBatches([]);
-      setFilteredBatches([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearchTerm]);
-
-  // Alternative: Client-side filtering if API doesn't support search
+  // Fetch all batches - no search params, pure frontend filtering
   const fetchAllBatches = useCallback(async () => {
     setLoading(true);
     try {
+      // Always fetch all batches without any search parameters
       const response = await ManufacturingBatchApis.getAllManufacturingBatches({});
       
       console.log("API Response:", response); // Debug log
       
       if (response.status === 200) {
-        const allBatches = response.data.batches || [];
-        setBatches(allBatches);
-        
-        // Client-side filtering
-        if (debouncedSearchTerm.trim()) {
-          const filtered = allBatches.filter((batch: ManufacturingBatch) =>
-            batch.batch_number.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-            batch.finished_good_id?.product_name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-            batch.status.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-          );
-          setFilteredBatches(filtered);
-        } else {
-          setFilteredBatches(allBatches);
-        }
+        const batches = response.data.batches || [];
+        setAllBatches(batches);
+        // Don't set filteredBatches here - let the filter effect handle it
+      } else {
+        console.error("API Error:", response);
+        setAllBatches([]);
+        setFilteredBatches([]);
       }
     } catch (error) {
       console.error("Error fetching batches:", error);
-      setBatches([]);
+      setAllBatches([]);
       setFilteredBatches([]);
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearchTerm]);
+  }, []);
 
+  // Filter batches based on search term - pure frontend filtering
   useEffect(() => {
-    // Try server-side filtering first, fallback to client-side if needed
-    fetchBatches();
-    
-    // If you want to use client-side filtering instead, uncomment the line below and comment out fetchBatches()
-    // fetchAllBatches();
-  }, [fetchBatches]);
+    if (!debouncedSearchTerm.trim()) {
+      // No search term - show all batches
+      setFilteredBatches(allBatches);
+      return;
+    }
+
+    const searchLower = debouncedSearchTerm.toLowerCase().trim();
+    const filtered = allBatches.filter((batch: ManufacturingBatch) => {
+      // Safe access to nested properties with fallbacks
+      const batchNumber = batch.batch_number?.toLowerCase() || '';
+      const productName = batch.finished_good_id?.product_name?.toLowerCase() || '';
+      const status = batch.status?.toLowerCase() || '';
+      const currentStage = batch.current_stage?.stage_name?.toLowerCase() || '';
+      const workflowName = batch.workflow_id?.workflow_name?.toLowerCase() || '';
+
+      return (
+        batchNumber.includes(searchLower) ||
+        productName.includes(searchLower) ||
+        status.includes(searchLower) ||
+        currentStage.includes(searchLower) ||
+        workflowName.includes(searchLower)
+      );
+    });
+
+    setFilteredBatches(filtered);
+  }, [allBatches, debouncedSearchTerm]);
+
+  // Initial fetch - only runs once
+  useEffect(() => {
+    fetchAllBatches();
+  }, []);
 
   const handleViewDetails = (batchId: string) => {
     router.push(`/dashboard/production/${batchId}`);
@@ -140,6 +138,14 @@ const ManufacturingBatchesPage: React.FC = () => {
               {batch?.finished_good_id?.product_name || 'N/A'}
             </span>
           </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">Workflow:</span>
+            <span className="text-sm font-medium text-gray-900">
+              {batch?.workflow_id?.workflow_name || 'N/A'}
+            </span>
+          </div>
+          
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Status:</span>
             <span className={`text-sm font-medium px-2 py-1 rounded-full ${
@@ -153,6 +159,7 @@ const ManufacturingBatchesPage: React.FC = () => {
               {batch?.status}
             </span>
           </div>
+          
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Quantity:</span>
             <span className="text-sm font-medium text-gray-900">
@@ -191,54 +198,60 @@ const ManufacturingBatchesPage: React.FC = () => {
 
       {/* Search Input with Clear Button */}
       <div className="mb-6 relative">
-        <input
-          type="text"
-          placeholder="Search by batch number, product name, or status..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-        {searchTerm && (
-          <button
-            onClick={clearSearch}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        )}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search by batch number, product name, status, stage, or workflow..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          />
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Search Results Info */}
-      {searchTerm && (
+      {debouncedSearchTerm && (
         <div className="mb-4 text-sm text-gray-600">
-          {loading ? 'Searching...' : `Found ${filteredBatches.length} result(s) for "${searchTerm}"`}
+          Found {filteredBatches.length} result(s) for &quot;{debouncedSearchTerm}&quot;
         </div>
       )}
 
       <div className="min-h-96">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-gray-600">Loading batches...</p>
           </div>
         ) : filteredBatches.length === 0 ? (
           <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchTerm ? 'No matching batches found' : 'No manufacturing batches found'}
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {searchTerm 
-                ? `Try adjusting your search term "${searchTerm}"`
-                : 'Create a production plan and activate it to start a new batch.'
-              }
-            </p>
-            {searchTerm && (
-              <button
-                onClick={clearSearch}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                Clear search
-              </button>
-            )}
+            <div className="max-w-md mx-auto">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {debouncedSearchTerm ? 'No matching batches found' : 'No manufacturing batches found'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {debouncedSearchTerm 
+                  ? `No batches match your search for "${debouncedSearchTerm}". Try using different keywords or check your spelling.`
+                  : 'Create a production plan and activate it to start a new batch.'
+                }
+              </p>
+              {debouncedSearchTerm && (
+                <button
+                  onClick={clearSearch}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Clear search and show all batches
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -248,6 +261,16 @@ const ManufacturingBatchesPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Summary info */}
+      {!loading && allBatches.length > 0 && (
+        <div className="mt-8 text-center text-sm text-gray-500">
+          {debouncedSearchTerm 
+            ? `Showing ${filteredBatches.length} of ${allBatches.length} total batches`
+            : `Total: ${allBatches.length} batches`
+          }
+        </div>
+      )}
     </div>
   );
 };

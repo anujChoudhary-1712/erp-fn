@@ -1,14 +1,17 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ManufacturingBatchApis from "@/actions/Apis/BatchApis";
 import Button from "@/components/ReusableComponents/Button";
 import { formatDate } from "@/utils/date";
-import { X, FileText, Upload, Trash2, AlertTriangle, ChevronsRight, Recycle, ShieldCheck } from "lucide-react";
-import { getCookie } from "@/actions/CookieUtils";
+import {
+  AlertTriangle,
+  ChevronsRight,
+  ShieldCheck,
+  Download,
+} from "lucide-react";
 import InputField from "@/components/ReusableComponents/InputField";
-
-// --- UPDATED TYPESCRIPT INTERFACES ---
+import { useReactToPrint } from "react-to-print";
 
 interface FinishedGood {
   product_name: string;
@@ -28,18 +31,18 @@ interface ReworkItem {
   stage_name: string;
   quantity: number;
   reason: string;
-  status: 'Pending' | 'Resolved';
+  status: "Pending" | "Resolved";
 }
 
 interface Disposition {
-    quantity_passed: number;
-    quantity_for_rework: number;
-    quantity_rejected: number;
+  quantity_passed: number;
+  quantity_for_rework: number;
+  quantity_rejected: number;
 }
 
 interface QualityCheckRecord {
   _id: string;
-  overall_result: 'pass' | 'fail' | 'rework' | 'partial';
+  overall_result: "pass" | "fail" | "rework" | "partial";
   disposition: Disposition;
   notes: string;
   check_date: string;
@@ -53,9 +56,30 @@ interface StageHistory {
   quality_checks?: QualityCheckRecord[];
 }
 
+// Added interfaces for new data
+interface ProductionPlan {
+  _id: string;
+  plan_type: string;
+  plan_name: string;
+  start_date: string;
+  end_date: string;
+}
+
+interface RawMaterialUsed {
+  material_id: {
+    _id: string;
+    material_name: string;
+    unit: string;
+  };
+  quantity_issued: number;
+  lot_numbers: string[];
+  issue_date: string;
+}
+
 interface ManufacturingBatch {
   _id: string;
   batch_number: string;
+  production_plan_id: ProductionPlan; // Added production plan interface
   finished_good_id: FinishedGood;
   quantity_planned: number;
   quantity_produced: number;
@@ -70,6 +94,7 @@ interface ManufacturingBatch {
   };
   rework_items: ReworkItem[];
   stages_history: StageHistory[];
+  raw_materials_used: RawMaterialUsed[]; // Added raw materials interface
   status: "Draft" | "In Progress" | "Completed" | "Rejected" | "On Hold";
   workflow_id: {
     _id: string;
@@ -89,388 +114,799 @@ interface SampleDataForForm {
   }[];
 }
 
-
-// --- MODAL COMPONENTS ---
-
-// This modal is for handling the combined Quality Check and Disposition
 const QualityCheckModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
-    onSubmit: (payload: any) => Promise<void>;
-    batch: ManufacturingBatch;
-    submitting: boolean;
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (payload: any) => Promise<void>;
+  batch: ManufacturingBatch;
+  submitting: boolean;
 }> = ({ isOpen, onClose, onSubmit, batch, submitting }) => {
-    
-    // State for detailed sample checks
-    const [qualityCheckParams, setQualityCheckParams] = useState<any[]>([]);
-    const [numberOfSamples, setNumberOfSamples] = useState<number>(1);
-    const [samplesData, setSamplesData] = useState<SampleDataForForm[]>([]);
-    
-    // State for disposition
-    const [passed, setPassed] = useState(0);
-    const [rework, setRework] = useState(0);
-    const [rejected, setRejected] = useState(0);
-    const [reworkReason, setReworkReason] = useState("");
-    const [notes, setNotes] = useState("");
-    const [error, setError] = useState("");
+  // State for detailed sample checks
+  const [qualityCheckParams, setQualityCheckParams] = useState<any[]>([]);
+  const [numberOfSamples, setNumberOfSamples] = useState<number>(1);
+  const [samplesData, setSamplesData] = useState<SampleDataForForm[]>([]);
 
-    const quantityAtStage = batch.current_stage?.quantity || 0;
+  // State for disposition
+  const [passed, setPassed] = useState(0);
+  const [rework, setRework] = useState(0);
+  const [rejected, setRejected] = useState(0);
+  const [reworkReason, setReworkReason] = useState("");
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState("");
 
-    // Fetch parameters and initialize the form when modal opens
-    useEffect(() => {
-        if (isOpen && batch.current_stage) {
-            const fetchAndInit = async () => {
-                try {
-                    const response = await ManufacturingBatchApis.getQualityParameters(batch._id, batch.current_stage!.stage_id);
-                    const fetchedParams = response.data.parameters || [];
-                    setQualityCheckParams(fetchedParams);
-                    initializeSamplesData(numberOfSamples, fetchedParams);
-                } catch (err) {
-                    console.error("Failed to fetch QC params:", err);
-                    setError("Could not load quality parameters for this stage.");
-                }
-            };
-            fetchAndInit();
-            setPassed(quantityAtStage);
-            setRework(0);
-            setRejected(0);
+  const quantityAtStage = batch.current_stage?.quantity || 0;
+
+  // Fetch parameters and initialize the form when modal opens
+  useEffect(() => {
+    if (isOpen && batch.current_stage) {
+      const fetchAndInit = async () => {
+        try {
+          const response = await ManufacturingBatchApis.getQualityParameters(
+            batch._id,
+            batch.current_stage!.stage_id
+          );
+          const fetchedParams = response.data.parameters || [];
+          setQualityCheckParams(fetchedParams);
+          initializeSamplesData(numberOfSamples, fetchedParams);
+        } catch (err) {
+          console.error("Failed to fetch QC params:", err);
+          setError("Could not load quality parameters for this stage.");
         }
-    }, [isOpen, batch, numberOfSamples]);
-
-    const initializeSamplesData = (count: number, params: any[]) => {
-        const newSamplesData: SampleDataForForm[] = Array.from({ length: count }, (_, i) => ({
-            sample_number: i + 1,
-            parameters: params.map(p => ({
-                parameter_name: p.parameter_name,
-                specification: p.specification,
-                observed_value: '',
-                passed: false,
-            })),
-        }));
-        setSamplesData(newSamplesData);
-    };
-
-    const handleSampleDataChange = (sampleIndex: number, paramIndex: number, field: string, value: any) => {
-        const updatedSamples = [...samplesData];
-        (updatedSamples[sampleIndex].parameters[paramIndex] as any)[field] = value;
-        setSamplesData(updatedSamples);
-    };
-
-    // Validate disposition quantities
-    useEffect(() => {
-        const total = passed + rework + rejected;
-        if (total !== quantityAtStage) {
-            setError(`Disposition quantities must sum to ${quantityAtStage}. Current sum: ${total}`);
-        } else {
-            setError("");
-        }
-    }, [passed, rework, rejected, quantityAtStage]);
-
-    const handleSubmit = () => {
-        if (error) return;
-        const flattenedSamplesData = samplesData.flatMap(sample => 
-            sample.parameters.map(param => ({
-                parameter: param.parameter_name,
-                specification: param.specification,
-                observed_value: param.observed_value,
-                passed: param.passed,
-            }))
-        );
-
-        const payload = {
-            disposition: { quantity_passed: passed, quantity_for_rework: rework, quantity_rejected: rejected },
-            rework_reason: reworkReason,
-            notes: notes,
-            samples_data: flattenedSamplesData
-        };
-        onSubmit(payload);
-    };
-    
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl">
-                <h3 className="text-xl font-semibold mb-4">Perform Quality Check</h3>
-                <div className="max-h-[75vh] overflow-y-auto pr-4 space-y-6">
-                    {/* --- Step 1: Detailed Quality Check --- */}
-                    <div className="p-4 border rounded-lg">
-                        <h4 className="font-semibold text-gray-800 mb-4">Detailed Sample Analysis</h4>
-                        <InputField label="Number of Samples to Test" type="number" value={numberOfSamples} onChange={e => setNumberOfSamples(Number(e.target.value))} min="1" max={batch.quantity_planned}/>
-                        <div className="space-y-4 mt-4">
-                             {samplesData.map((sample, sampleIndex) => (
-                                <div key={sample.sample_number} className="p-3 bg-gray-50 border rounded-md">
-                                    <h5 className="font-medium text-gray-700 mb-2">Sample #{sample.sample_number}</h5>
-                                     {sample.parameters.map((param, paramIndex) => (
-                                        <div key={paramIndex} className="grid grid-cols-3 gap-4 items-center mb-2">
-                                            <div className="col-span-2">
-                                                <label className="text-xs text-gray-500">{param.parameter_name} (Spec: {param.specification})</label>
-                                                <InputField type="text" value={param.observed_value} onChange={e => handleSampleDataChange(sampleIndex, paramIndex, 'observed_value', e.target.value)} placeholder="Observed value" className="mt-1"/>
-                                            </div>
-                                            <div className="flex items-center pt-5">
-                                                <input id={`pass-${sampleIndex}-${paramIndex}`} type="checkbox" checked={param.passed} onChange={e => handleSampleDataChange(sampleIndex, paramIndex, 'passed', e.target.checked)} className="h-4 w-4 text-blue-600 rounded"/>
-                                                <label htmlFor={`pass-${sampleIndex}-${paramIndex}`} className="ml-2 text-sm text-gray-700">Passed</label>
-                                            </div>
-                                        </div>
-                                     ))}
-                                </div>
-                             ))}
-                        </div>
-                    </div>
-
-                    {/* --- Step 2: Final Disposition --- */}
-                     <div className="p-4 border rounded-lg">
-                        <h4 className="font-semibold text-gray-800 mb-2">Final Disposition</h4>
-                        <p className="text-sm text-gray-600 mb-4">Distribute the total <span className="font-bold">{quantityAtStage} units</span> from this stage.</p>
-                        {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-                        <div className="space-y-3">
-                            <InputField label="Quantity Passed (to next stage)" type="number" value={passed} onChange={e => setPassed(Number(e.target.value))} max={quantityAtStage} min={0} />
-                            <InputField label="Quantity for Rework" type="number" value={rework} onChange={e => setRework(Number(e.target.value))} max={quantityAtStage} min={0}/>
-                            <InputField label="Quantity Rejected (scrapped)" type="number" value={rejected} onChange={e => setRejected(Number(e.target.value))} max={quantityAtStage} min={0}/>
-                            {rework > 0 && <InputField label="Rework Reason" type="text" value={reworkReason} onChange={e => setReworkReason(e.target.value)} placeholder="e.g., Stitching defects"/>}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Overall Notes</label>
-                                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="mt-1 w-full p-2 border rounded-md"/>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex justify-end space-x-4 mt-6 pt-4 border-t">
-                    <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button variant="primary" onClick={handleSubmit} disabled={submitting || !!error}>{submitting ? "Submitting..." : "Submit Results"}</Button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const ResolveReworkModal: React.FC<{isOpen: boolean; onClose: () => void; onSubmit: (reworkId: string, payload: any) => Promise<void>; reworkItem: ReworkItem | null; submitting: boolean;}> = ({ isOpen, onClose, onSubmit, reworkItem, submitting }) => {
-    // Hooks are safe here
-    const [passed, setPassed] = useState(0);
-    const [rejected, setRejected] = useState(0);
-    const [notes, setNotes] = useState("");
-    const [error, setError] = useState("");
-
-    useEffect(() => {
-        if (reworkItem) {
-            setPassed(reworkItem.quantity);
-            setRejected(0);
-        }
-    }, [reworkItem]);
-
-    useEffect(() => {
-        if (reworkItem) {
-            const total = passed + rejected;
-            if (total !== reworkItem.quantity) {
-                setError(`Quantities must sum to ${reworkItem.quantity}. Current sum: ${total}`);
-            } else { setError(""); }
-        }
-    }, [passed, rejected, reworkItem]);
-
-    if (!isOpen || !reworkItem) return null;
-
-    const handleSubmit = () => {
-        if (error) return;
-        const payload = {
-            disposition: { quantity_passed: passed, quantity_rejected: rejected },
-            notes: notes
-        };
-        onSubmit(reworkItem._id, payload);
-    };
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-                <h3 className="text-lg font-semibold mb-2">Resolve Rework Item</h3>
-                <p className="text-sm text-gray-600 mb-4">Result for <span className="font-bold">{reworkItem.quantity} reworked units</span> from stage: <span className="font-bold">{reworkItem.stage_name}</span></p>
-                {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-                <div className="space-y-4">
-                    <InputField label="Quantity Passed (Good)" type="number" value={passed} onChange={e => setPassed(Number(e.target.value))} max={reworkItem.quantity} min={0}/>
-                    <InputField label="Quantity Rejected (Scrapped)" type="number" value={rejected} onChange={e => setRejected(Number(e.target.value))} max={reworkItem.quantity} min={0}/>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Resolution Notes</label>
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="mt-1 w-full p-2 border rounded-md"/>
-                    </div>
-                </div>
-                <div className="flex justify-end space-x-4 mt-6">
-                    <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button variant="primary" onClick={handleSubmit} disabled={submitting || !!error}>{submitting ? "Submitting..." : "Submit Resolution"}</Button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-
-// --- HELPER FUNCTIONS ---
-const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-        case "in progress": return "border-blue-300 text-blue-700 bg-blue-50";
-        case "completed": return "border-green-300 text-green-700 bg-green-50";
-        case "rejected": return "border-red-300 text-red-700 bg-red-50";
-        case "on hold": return "border-yellow-300 text-yellow-700 bg-yellow-50";
-        default: return "border-gray-300 text-gray-700 bg-gray-50";
+      };
+      fetchAndInit();
+      setPassed(quantityAtStage);
+      setRework(0);
+      setRejected(0);
     }
-};
+  }, [isOpen, batch, numberOfSamples]);
 
-// --- MAIN PAGE COMPONENT ---
-const SingleManufacturingBatchPage = ({ params }: { params: { id: string } }) => {
-    const router = useRouter();
-    const [batch, setBatch] = useState<ManufacturingBatch | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string>("");
-    const [submitting, setSubmitting] = useState<boolean>(false);
-    
-    const [showQualityCheckModal, setShowQualityCheckModal] = useState<boolean>(false);
-    const [showResolveReworkModal, setShowResolveReworkModal] = useState<boolean>(false);
-    const [selectedReworkItem, setSelectedReworkItem] = useState<ReworkItem | null>(null);
+  const initializeSamplesData = (count: number, params: any[]) => {
+    const newSamplesData: SampleDataForForm[] = Array.from(
+      { length: count },
+      (_, i) => ({
+        sample_number: i + 1,
+        parameters: params.map((p) => ({
+          parameter_name: p.parameter_name,
+          specification: p.specification,
+          observed_value: "",
+          passed: false,
+        })),
+      })
+    );
+    setSamplesData(newSamplesData);
+  };
 
-    const fetchBatchDetails = async () => {
-        setLoading(true);
-        setError("");
-        try {
-            const response = await ManufacturingBatchApis.getSingleManufacturingBatch(params.id);
-            if (response.status === 200) setBatch(response.data.batch);
-            else throw new Error(response.data?.message || "Failed to fetch details");
-        } catch (err: any) {
-            setError(err.message || "Failed to load details");
-        } finally {
-            setLoading(false);
-        }
+  const handleSampleDataChange = (
+    sampleIndex: number,
+    paramIndex: number,
+    field: string,
+    value: any
+  ) => {
+    const updatedSamples = [...samplesData];
+    (updatedSamples[sampleIndex].parameters[paramIndex] as any)[field] = value;
+    setSamplesData(updatedSamples);
+  };
+
+  // Validate disposition quantities
+  useEffect(() => {
+    const total = passed + rework + rejected;
+    if (total !== quantityAtStage) {
+      setError(
+        `Disposition quantities must sum to ${quantityAtStage}. Current sum: ${total}`
+      );
+    } else {
+      setError("");
+    }
+  }, [passed, rework, rejected, quantityAtStage]);
+
+  const handleSubmit = () => {
+    if (error) return;
+    const flattenedSamplesData = samplesData.flatMap((sample) =>
+      sample.parameters.map((param) => ({
+        parameter: param.parameter_name,
+        specification: param.specification,
+        observed_value: param.observed_value,
+        passed: param.passed,
+      }))
+    );
+
+    const payload = {
+      disposition: {
+        quantity_passed: passed,
+        quantity_for_rework: rework,
+        quantity_rejected: rejected,
+      },
+      rework_reason: reworkReason,
+      notes: notes,
+      samples_data: flattenedSamplesData,
     };
+    onSubmit(payload);
+  };
 
-    useEffect(() => { if (params.id) fetchBatchDetails(); }, [params.id]);
+  if (!isOpen) return null;
 
-    const handleDispositionSubmit = async (payload: any) => {
-        if (!batch) return;
-        setSubmitting(true);
-        setError("");
-        try {
-            await ManufacturingBatchApis.performQualityCheck(batch._id, payload);
-            setShowQualityCheckModal(false);
-            await fetchBatchDetails();
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to submit disposition.");
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleOpenResolveReworkModal = (reworkItem: ReworkItem) => {
-        setSelectedReworkItem(reworkItem);
-        setShowResolveReworkModal(true);
-    };
-  
-    const handleResolveReworkSubmit = async (reworkId: string, payload: any) => {
-        if (!batch) return;
-        setSubmitting(true);
-        setError("");
-        try {
-            await ManufacturingBatchApis.resolveReworkItem(batch._id, reworkId, payload);
-            setShowResolveReworkModal(false);
-            setSelectedReworkItem(null);
-            await fetchBatchDetails();
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Failed to resolve rework item.");
-        } finally {
-            setSubmitting(false);
-        }
-    };
-  
-    if (loading) return <div className="text-center p-8">Loading...</div>;
-    if (error && !batch) return <div className="text-center p-8 text-red-600">Error: {error}</div>;
-    if (!batch) return <div className="text-center p-8">Batch not found.</div>;
-
-    const pendingReworkItems = (batch.rework_items || []).filter(item => item.status === 'Pending');
-
-    return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-            <h1 className="text-3xl font-bold text-gray-900">Batch #{batch.batch_number}</h1>
-            <p className="text-gray-600 mt-1">Product: {batch.finished_good_id.product_name} | Lot: {batch.lot_number}</p>
-        </div>
-        <span className={`px-4 py-1.5 rounded-full text-sm font-medium border ${getStatusColor(batch.status)}`}>{batch.status}</span>
-      </div>
-
-      {error && <div className="p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg">{error}</div>}
-
-      <div className="bg-white p-6 rounded-lg border shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Batch Progress</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div><p className="text-sm text-gray-500">PLANNED</p><p className="text-2xl font-bold text-gray-800">{batch.quantity_planned}</p></div>
-            <div className="p-2 bg-green-50 rounded-lg"><p className="text-sm text-green-600 font-semibold">PRODUCED (GOOD)</p><p className="text-2xl font-bold text-green-700">{batch.quantity_produced}</p></div>
-            <div className="p-2 bg-orange-50 rounded-lg"><p className="text-sm text-orange-600 font-semibold">IN REWORK</p><p className="text-2xl font-bold text-orange-700">{batch.quantity_in_rework}</p></div>
-            <div className="p-2 bg-red-50 rounded-lg"><p className="text-sm text-red-600 font-semibold">REJECTED</p><p className="text-2xl font-bold text-red-700">{batch.quantity_rejected}</p></div>
-        </div>
-      </div>
-
-      {pendingReworkItems.length > 0 && (
-        <div className="bg-orange-50 p-6 rounded-lg border border-orange-200">
-          <div className="flex items-center mb-4"><AlertTriangle className="h-6 w-6 text-orange-600 mr-3" /><h3 className="text-lg font-semibold text-orange-900">Items Pending Rework</h3></div>
-          <div className="space-y-3">
-            {pendingReworkItems.map(item => (
-              <div key={item._id} className="p-3 bg-white rounded-md border flex justify-between items-center">
-                <div><p className="font-medium text-gray-800">{item.quantity} units from &quot;{item.stage_name}&quot;</p><p className="text-sm text-gray-600">Reason: {item.reason}</p></div>
-                <Button variant="warning" size="sm" onClick={() => handleOpenResolveReworkModal(item)}>Resolve</Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {batch.status === "In Progress" && batch.current_stage && (
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2"><ChevronsRight className="inline-block h-5 w-5 text-blue-600 mr-2" />Current Stage: {batch.current_stage.stage_name}</h3>
-          <p className="text-sm text-gray-600 mb-4 ml-7">Processing Quantity: <span className="font-medium">{batch.current_stage.quantity}</span> units</p>
-          <div className="flex flex-wrap gap-4 ml-7"><Button variant="primary" onClick={() => setShowQualityCheckModal(true)}><ShieldCheck className="mr-2 h-4 w-4"/>Perform Quality Check</Button></div>
-        </div>
-      )}
-
-      {batch.status === "On Hold" && (<div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200"><h3 className="text-lg font-semibold text-yellow-900">Batch On Hold</h3><p className="text-yellow-800">Please resolve all pending rework items to finalize the batch.</p></div>)}
-      {batch.status === "Completed" && (<div className="bg-green-50 p-6 rounded-lg border border-green-200"><h3 className="text-lg font-semibold text-green-900">Batch Completed</h3><p className="text-green-800">Final produced count is {batch.quantity_produced}.</p></div>)}
-
-      <div className="bg-white p-6 rounded-lg border shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Stage History & Quality Checks</h3>
-        {(batch.stages_history || []).length > 0 ? (
-          (batch.stages_history || []).map(history => (
-            <div key={history.stage_id} className="mb-4 border-b pb-4 last:border-b-0 last:pb-0">
-              <h4 className="font-semibold text-lg text-gray-800">{history.stage_name}</h4>
-              {history.quality_checks && history.quality_checks.length > 0 ? (
-                <div className="mt-2 space-y-3 pl-4 border-l-2">
-                  {history.quality_checks.map(qc => (
-                    <div key={qc._id} className="p-3 bg-gray-50 rounded-md border">
-                      <p className="text-sm font-medium">QC on {formatDate(qc.check_date)}</p>
-                      <div className="grid grid-cols-3 gap-2 mt-2 text-center">
-                        <div className="bg-green-100 p-1 rounded"><p className="text-xs text-green-700">Passed</p><p className="font-bold text-green-800">{qc.disposition.quantity_passed}</p></div>
-                        <div className="bg-orange-100 p-1 rounded"><p className="text-xs text-orange-700">Rework</p><p className="font-bold text-orange-800">{qc.disposition.quantity_for_rework}</p></div>
-                        <div className="bg-red-100 p-1 rounded"><p className="text-xs text-red-700">Rejected</p><p className="font-bold text-red-800">{qc.disposition.quantity_rejected}</p></div>
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl">
+        <h3 className="text-xl font-semibold mb-4">Perform Quality Check</h3>
+        <div className="max-h-[75vh] overflow-y-auto pr-4 space-y-6">
+          {/* --- Step 1: Detailed Quality Check --- */}
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-semibold text-gray-800 mb-4">
+              Detailed Sample Analysis
+            </h4>
+            <InputField
+              label="Number of Samples to Test"
+              type="number"
+              value={numberOfSamples}
+              onChange={(e) => setNumberOfSamples(Number(e.target.value))}
+              min="1"
+              max={batch.quantity_planned}
+            />
+            <div className="space-y-4 mt-4">
+              {samplesData.map((sample, sampleIndex) => (
+                <div
+                  key={sample.sample_number}
+                  className="p-3 bg-gray-50 border rounded-md"
+                >
+                  <h5 className="font-medium text-gray-700 mb-2">
+                    Sample #{sample.sample_number}
+                  </h5>
+                  {sample.parameters.map((param, paramIndex) => (
+                    <div
+                      key={paramIndex}
+                      className="grid grid-cols-3 gap-4 items-center mb-2"
+                    >
+                      <div className="col-span-2">
+                        <label className="text-xs text-gray-500">
+                          {param.parameter_name} (Spec: {param.specification})
+                        </label>
+                        <InputField
+                          type="text"
+                          value={param.observed_value}
+                          onChange={(e) =>
+                            handleSampleDataChange(
+                              sampleIndex,
+                              paramIndex,
+                              "observed_value",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Observed value"
+                          className="mt-1"
+                        />
                       </div>
-                      {qc.notes && <p className="text-xs text-gray-600 mt-2"><b>Notes:</b> {qc.notes}</p>}
+                      <div className="flex items-center pt-5">
+                        <input
+                          id={`pass-${sampleIndex}-${paramIndex}`}
+                          type="checkbox"
+                          checked={param.passed}
+                          onChange={(e) =>
+                            handleSampleDataChange(
+                              sampleIndex,
+                              paramIndex,
+                              "passed",
+                              e.target.checked
+                            )
+                          }
+                          className="h-4 w-4 text-blue-600 rounded"
+                        />
+                        <label
+                          htmlFor={`pass-${sampleIndex}-${paramIndex}`}
+                          className="ml-2 text-sm text-gray-700"
+                        >
+                          Passed
+                        </label>
+                      </div>
                     </div>
                   ))}
                 </div>
-              ) : <p className="text-sm text-gray-500 pl-4">No quality checks performed.</p>}
+              ))}
             </div>
-          ))
-        ) : <p className="text-gray-500">No stage history recorded yet.</p>}
+          </div>
+
+          {/* --- Step 2: Final Disposition --- */}
+          <div className="p-4 border rounded-lg">
+            <h4 className="font-semibold text-gray-800 mb-2">
+              Final Disposition
+            </h4>
+            <p className="text-sm text-gray-600 mb-4">
+              Distribute the total{" "}
+              <span className="font-bold">{quantityAtStage} units</span> from
+              this stage.
+            </p>
+            {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+            <div className="space-y-3">
+              <InputField
+                label="Quantity Passed (to next stage)"
+                type="number"
+                value={passed}
+                onChange={(e) => setPassed(Number(e.target.value))}
+                max={quantityAtStage}
+                min={0}
+              />
+              <InputField
+                label="Quantity for Rework"
+                type="number"
+                value={rework}
+                onChange={(e) => setRework(Number(e.target.value))}
+                max={quantityAtStage}
+                min={0}
+              />
+              <InputField
+                label="Quantity Rejected (scrapped)"
+                type="number"
+                value={rejected}
+                onChange={(e) => setRejected(Number(e.target.value))}
+                max={quantityAtStage}
+                min={0}
+              />
+              {rework > 0 && (
+                <InputField
+                  label="Rework Reason"
+                  type="text"
+                  value={reworkReason}
+                  onChange={(e) => setReworkReason(e.target.value)}
+                  placeholder="e.g., Stitching defects"
+                />
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Overall Notes
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  className="mt-1 w-full p-2 border rounded-md"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end space-x-4 mt-6 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={submitting || !!error}
+          >
+            {submitting ? "Submitting..." : "Submit Results"}
+          </Button>
+        </div>
       </div>
-      
-      {batch.current_stage && 
-        <QualityCheckModal
+    </div>
+  );
+};
+
+const ResolveReworkModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (reworkId: string, payload: any) => Promise<void>;
+  reworkItem: ReworkItem | null;
+  submitting: boolean;
+}> = ({ isOpen, onClose, onSubmit, reworkItem, submitting }) => {
+  // Hooks are safe here
+  const [passed, setPassed] = useState(0);
+  const [rejected, setRejected] = useState(0);
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (reworkItem) {
+      setPassed(reworkItem.quantity);
+      setRejected(0);
+    }
+  }, [reworkItem]);
+
+  useEffect(() => {
+    if (reworkItem) {
+      const total = passed + rejected;
+      if (total !== reworkItem.quantity) {
+        setError(
+          `Quantities must sum to ${reworkItem.quantity}. Current sum: ${total}`
+        );
+      } else {
+        setError("");
+      }
+    }
+  }, [passed, rejected, reworkItem]);
+
+  if (!isOpen || !reworkItem) return null;
+
+  const handleSubmit = () => {
+    if (error) return;
+    const payload = {
+      disposition: { quantity_passed: passed, quantity_rejected: rejected },
+      notes: notes,
+    };
+    onSubmit(reworkItem._id, payload);
+  };
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+        <h3 className="text-lg font-semibold mb-2">Resolve Rework Item</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Result for{" "}
+          <span className="font-bold">
+            {reworkItem.quantity} reworked units
+          </span>{" "}
+          from stage: <span className="font-bold">{reworkItem.stage_name}</span>
+        </p>
+        {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+        <div className="space-y-4">
+          <InputField
+            label="Quantity Passed (Good)"
+            type="number"
+            value={passed}
+            onChange={(e) => setPassed(Number(e.target.value))}
+            max={reworkItem.quantity}
+            min={0}
+          />
+          <InputField
+            label="Quantity Rejected (Scrapped)"
+            type="number"
+            value={rejected}
+            onChange={(e) => setRejected(Number(e.target.value))}
+            max={reworkItem.quantity}
+            min={0}
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Resolution Notes
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="mt-1 w-full p-2 border rounded-md"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end space-x-4 mt-6">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={submitting || !!error}
+          >
+            {submitting ? "Submitting..." : "Submit Resolution"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const getStatusColor = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case "in progress":
+      return "border-blue-300 text-blue-700 bg-blue-50";
+    case "completed":
+      return "border-green-300 text-green-700 bg-green-50";
+    case "rejected":
+      return "border-red-300 text-red-700 bg-red-50";
+    case "on hold":
+      return "border-yellow-300 text-yellow-700 bg-yellow-50";
+    default:
+      return "border-gray-300 text-gray-700 bg-gray-50";
+  }
+};
+
+const SingleManufacturingBatchPage = ({
+  params,
+}: {
+  params: { id: string };
+}) => {
+  const router = useRouter();
+  const [batch, setBatch] = useState<ManufacturingBatch | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+  const [submitting, setSubmitting] = useState<boolean>(false);
+
+  const [showQualityCheckModal, setShowQualityCheckModal] =
+    useState<boolean>(false);
+  const [showResolveReworkModal, setShowResolveReworkModal] =
+    useState<boolean>(false);
+  const [selectedReworkItem, setSelectedReworkItem] =
+    useState<ReworkItem | null>(null);
+
+  // FIXED: Proper typing for the ref - it should reference an HTMLDivElement
+  const componentRef = useRef<HTMLDivElement>(null);
+  
+  // FIXED: Use contentRef instead of content callback
+  const handlePrint = useReactToPrint({
+    contentRef: componentRef,
+    documentTitle: `Batch_${batch?.batch_number}_Report`,
+    onBeforePrint: async () => {
+      console.log("Preparing to print...");
+      // Add any async operations here if needed
+    },
+    onAfterPrint: () => {
+      console.log("Print completed!");
+    },
+    onPrintError: (error) => {
+      console.error("Print error:", error);
+      // Optionally, you can set an error state or show a notification to the user
+      setError("Failed to print. Please try again.");
+    }
+  });
+
+  const fetchBatchDetails = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await ManufacturingBatchApis.getSingleManufacturingBatch(
+        params.id
+      );
+      if (response.status === 200) setBatch(response.data.batch);
+      else throw new Error(response.data?.message || "Failed to fetch details");
+    } catch (err: any) {
+      setError(err.message || "Failed to load details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (params.id) fetchBatchDetails();
+  }, [params.id]);
+
+  const handleDispositionSubmit = async (payload: any) => {
+    if (!batch) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await ManufacturingBatchApis.performQualityCheck(batch._id, payload);
+      setShowQualityCheckModal(false);
+      await fetchBatchDetails();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to submit disposition.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenResolveReworkModal = (reworkItem: ReworkItem) => {
+    setSelectedReworkItem(reworkItem);
+    setShowResolveReworkModal(true);
+  };
+
+  const handleResolveReworkSubmit = async (reworkId: string, payload: any) => {
+    if (!batch) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await ManufacturingBatchApis.resolveReworkItem(
+        batch._id,
+        reworkId,
+        payload
+      );
+      setShowResolveReworkModal(false);
+      setSelectedReworkItem(null);
+      await fetchBatchDetails();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to resolve rework item.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="text-center p-8">Loading...</div>;
+  if (error && !batch)
+    return <div className="text-center p-8 text-red-600">Error: {error}</div>;
+  if (!batch) return <div className="text-center p-8">Batch not found.</div>;
+
+  const pendingReworkItems = (batch.rework_items || []).filter(
+    (item) => item.status === "Pending"
+  );
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
+      {/* PDF Download and Batch Info Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Batch #{batch.batch_number}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Product: {batch.finished_good_id.product_name}
+          </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+          <span
+            className={`px-4 py-1.5 rounded-full text-sm font-medium border ${getStatusColor(
+              batch.status
+            )}`}
+          >
+            {batch.status}
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Main Content to be printed */}
+      <div
+        ref={componentRef}
+        className="print:p-6 print:bg-white print:shadow-none"
+      >
+        <h1 className="hidden print:block text-2xl font-bold mb-4">
+          Batch Report: #{batch.batch_number}
+        </h1>
+
+        {/* Batch Progress */}
+        <div className="bg-white p-6 rounded-lg border shadow-sm print:shadow-none print:border-0 print:p-0">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            Batch Progress
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-sm text-gray-500">PLANNED</p>
+              <p className="text-2xl font-bold text-gray-800">
+                {batch.quantity_planned}
+              </p>
+            </div>
+            <div className="p-2 bg-green-50 rounded-lg">
+              <p className="text-sm text-green-600 font-semibold">
+                PRODUCED (GOOD)
+              </p>
+              <p className="text-2xl font-bold text-green-700">
+                {batch.quantity_produced}
+              </p>
+            </div>
+            <div className="p-2 bg-orange-50 rounded-lg">
+              <p className="text-sm text-orange-600 font-semibold">IN REWORK</p>
+              <p className="text-2xl font-bold text-orange-700">
+                {batch.quantity_in_rework}
+              </p>
+            </div>
+            <div className="p-2 bg-red-50 rounded-lg">
+              <p className="text-sm text-red-600 font-semibold">REJECTED</p>
+              <p className="text-2xl font-bold text-red-700">
+                {batch.quantity_rejected}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* New Production Plan Details Section */}
+        {batch.production_plan_id && (
+          <div className="bg-white p-6 rounded-lg border shadow-sm print:shadow-none print:border-0 print:p-0 mt-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              Production Plan Details
+            </h3>
+            <div className="space-y-2">
+              <p className="text-gray-700">
+                <span className="font-medium">Plan Name:</span>{" "}
+                {batch.production_plan_id.plan_name}
+              </p>
+              <p className="text-gray-700">
+                <span className="font-medium">Plan Type:</span>{" "}
+                {batch.production_plan_id.plan_type}
+              </p>
+              <p className="text-gray-700">
+                <span className="font-medium">Dates:</span>{" "}
+                {formatDate(batch.production_plan_id.start_date)} -{" "}
+                {formatDate(batch.production_plan_id.end_date)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* New Raw Materials Used Section */}
+        {batch.raw_materials_used && batch.raw_materials_used.length > 0 && (
+          <div className="bg-white p-6 rounded-lg border shadow-sm print:shadow-none print:border-0 print:p-0 mt-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              Raw Materials Used
+            </h3>
+            <div className="space-y-4">
+              {batch.raw_materials_used.map((material, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-gray-50 rounded-lg border print:bg-white print:border print:p-3"
+                >
+                  <p className="text-gray-800 font-medium">
+                    Material: {material.material_id.material_name}
+                  </p>
+                  <p className="text-gray-600">
+                    <span className="font-medium">Quantity Issued:</span>{" "}
+                    {material.quantity_issued} {material.material_id.unit}
+                  </p>
+                  <p className="text-gray-600">
+                    <span className="font-medium">Lot Number(s):</span>{" "}
+                    {material.lot_numbers.join(", ")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Conditional Sections */}
+        {pendingReworkItems.length > 0 && (
+          <div className="bg-orange-50 p-6 rounded-lg border border-orange-200 mt-6 print:hidden">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-orange-600 mr-3" />
+              <h3 className="text-lg font-semibold text-orange-900">
+                Items Pending Rework
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {pendingReworkItems.map((item) => (
+                <div
+                  key={item._id}
+                  className="p-3 bg-white rounded-md border flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      {item.quantity} units from &quot;{item.stage_name}&quot;
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Reason: {item.reason}
+                    </p>
+                  </div>
+                  <Button
+                    variant="warning"
+                    size="sm"
+                    onClick={() => handleOpenResolveReworkModal(item)}
+                  >
+                    Resolve
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {batch.status === "In Progress" && batch.current_stage && (
+          <div className="bg-white p-6 rounded-lg border shadow-sm mt-6 print:hidden">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <ChevronsRight className="inline-block h-5 w-5 text-blue-600 mr-2" />
+              Current Stage: {batch.current_stage.stage_name}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4 ml-7">
+              Processing Quantity:{" "}
+              <span className="font-medium">
+                {batch.current_stage.quantity}
+              </span>{" "}
+              units
+            </p>
+            <div className="flex flex-wrap gap-4 ml-7">
+              <Button
+                variant="primary"
+                onClick={() => setShowQualityCheckModal(true)}
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Perform Quality Check
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {batch.status === "On Hold" && (
+          <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200 mt-6 print:hidden">
+            <h3 className="text-lg font-semibold text-yellow-900">
+              Batch On Hold
+            </h3>
+            <p className="text-yellow-800">
+              Please resolve all pending rework items to finalize the batch.
+            </p>
+          </div>
+        )}
+        {batch.status === "Completed" && (
+          <div className="bg-green-50 p-6 rounded-lg border border-green-200 mt-6 print:hidden">
+            <h3 className="text-lg font-semibold text-green-900">
+              Batch Completed
+            </h3>
+            <p className="text-green-800">
+              Final produced count is {batch.quantity_produced}.
+            </p>
+          </div>
+        )}
+
+        {/* Stage History */}
+        <div className="bg-white p-6 rounded-lg border shadow-sm mt-6 print:shadow-none print:border-0 print:p-0">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">
+            Stage History & Quality Checks
+          </h3>
+          {(batch.stages_history || []).length > 0 ? (
+            (batch.stages_history || []).map((history) => (
+              <div
+                key={history.stage_id}
+                className="mb-4 border-b pb-4 last:border-b-0 last:pb-0"
+              >
+                <h4 className="font-semibold text-lg text-gray-800">
+                  {history.stage_name}
+                </h4>
+                {history.quality_checks && history.quality_checks.length > 0 ? (
+                  <div className="mt-2 space-y-3 pl-4 border-l-2">
+                    {history.quality_checks.map((qc) => (
+                      <div
+                        key={qc._id}
+                        className="p-3 bg-gray-50 rounded-md border print:bg-white print:border print:p-2"
+                      >
+                        <p className="text-sm font-medium">
+                          QC on {formatDate(qc.check_date)}
+                        </p>
+                        <div className="grid grid-cols-3 gap-2 mt-2 text-center">
+                          <div className="bg-green-100 p-1 rounded print:bg-gray-100">
+                            <p className="text-xs text-green-700">Passed</p>
+                            <p className="font-bold text-green-800">
+                              {qc.disposition.quantity_passed}
+                            </p>
+                          </div>
+                          <div className="bg-orange-100 p-1 rounded print:bg-gray-100">
+                            <p className="text-xs text-orange-700">Rework</p>
+                            <p className="font-bold text-orange-800">
+                              {qc.disposition.quantity_for_rework}
+                            </p>
+                          </div>
+                          <div className="bg-red-100 p-1 rounded print:bg-gray-100">
+                            <p className="text-xs text-red-700">Rejected</p>
+                            <p className="font-bold text-red-800">
+                              {qc.disposition.quantity_rejected}
+                            </p>
+                          </div>
+                        </div>
+                        {qc.notes && (
+                          <p className="text-xs text-gray-600 mt-2">
+                            <b>Notes:</b> {qc.notes}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 pl-4">
+                    No quality checks performed.
+                  </p>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500">No stage history recorded yet.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Modals - hidden during print */}
+      <div className="print:hidden">
+        {batch.current_stage && (
+          <QualityCheckModal
             isOpen={showQualityCheckModal}
             onClose={() => setShowQualityCheckModal(false)}
             onSubmit={handleDispositionSubmit}
             batch={batch}
             submitting={submitting}
+          />
+        )}
+        <ResolveReworkModal
+          isOpen={showResolveReworkModal}
+          onClose={() => {
+            setShowResolveReworkModal(false);
+            setSelectedReworkItem(null);
+          }}
+          onSubmit={handleResolveReworkSubmit}
+          reworkItem={selectedReworkItem}
+          submitting={submitting}
         />
-      }
-      <ResolveReworkModal
-        isOpen={showResolveReworkModal}
-        onClose={() => {setShowResolveReworkModal(false); setSelectedReworkItem(null);}}
-        onSubmit={handleResolveReworkSubmit}
-        reworkItem={selectedReworkItem}
-        submitting={submitting}
-      />
+      </div>
     </div>
   );
 };

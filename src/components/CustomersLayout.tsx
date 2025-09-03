@@ -169,10 +169,6 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
 
   // Function to check if user has access to a specific item
   const hasAccess = (itemId: string, requiredRoles: string[]) => {
-    console.log(`=== ACCESS CHECK ===`);
-    console.log(`Checking access for: ${itemId}`);
-    console.log(`Required roles:`, requiredRoles);
-    console.log(`User roles:`, user?.roles);
 
     // Explicitly grant access to the purchase request page for everyone
     if (itemId === "purchase-request") {
