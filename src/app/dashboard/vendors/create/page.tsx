@@ -44,12 +44,9 @@ const CreateVendorPage = () => {
     setSuccess("");
 
     try {
-      // Clean up the data before sending
       const cleanedData = {
         ...vendorData,
-        // Remove msme_reg_no if not MSME unit
         ...(vendorData.is_msme ? {} : { msme_reg_no: undefined }),
-        // Ensure empty strings are converted to appropriate values
         approved_for: vendorData.approved_for.trim(),
         company_name: vendorData.company_name.trim(),
         company_address: vendorData.company_address.trim(),
@@ -97,18 +94,18 @@ const CreateVendorPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="container mx-auto px-2 sm:px-4">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-4">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-start sm:items-center space-x-2 sm:space-x-4 mb-2 sm:mb-4">
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              className="p-1 sm:p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
               aria-label="Go back"
             >
               <svg
-                className="w-5 h-5 text-gray-600"
+                className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -121,11 +118,11 @@ const CreateVendorPage = () => {
                 />
               </svg>
             </button>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+            <div className="w-full">
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight">
                 Create New Vendor
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">
                 Fill in the complete vendor registration details below
               </p>
             </div>
@@ -134,10 +131,10 @@ const CreateVendorPage = () => {
 
         {/* Success Message */}
         {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg max-w-6xl mx-auto">
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg max-w-full mx-auto text-sm sm:text-base">
             <div className="flex items-center">
               <svg
-                className="w-5 h-5 text-green-600 mr-2"
+                className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mr-2 flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -156,10 +153,10 @@ const CreateVendorPage = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg max-w-6xl mx-auto">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg max-w-full mx-auto text-sm sm:text-base">
             <div className="flex items-center">
               <svg
-                className="w-5 h-5 text-red-600 mr-2"
+                className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 mr-2 flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

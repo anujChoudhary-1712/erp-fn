@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,7 +6,7 @@ import Button from "@/components/ReusableComponents/Button";
 import { formatDate } from "@/utils/date";
 import { useUser } from "@/context/UserContext";
 
-// TypeScript interfaces (no changes here)
+// TypeScript interfaces
 interface FinishedGood {
   current_stock: number;
   _id: string;
@@ -39,7 +37,7 @@ interface RawMaterial {
   };
   quantity_required: number;
   quantity_issued: number;
-  status: string; // Note: This field will be ignored for status display
+  status: string;
 }
 
 interface ProductionItem {
@@ -89,7 +87,6 @@ const CreateManufacturingBatchPage: React.FC = () => {
             return {
                 ...material,
                 requirementForBatch: requirementForBatch,
-                // Live calculation of availability
                 isAvailable: material.material_id.current_stock >= requirementForBatch,
             };
         });
@@ -184,22 +181,24 @@ const CreateManufacturingBatchPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="container mx-auto px-4">
-                <div className="mb-8">
-                    <div className="flex items-center space-x-4 mb-4">
+        <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+            <div className="container mx-auto px-4 max-w-5xl">
+                <div className="mb-6 sm:mb-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-4">
                         <button
                             onClick={() => router.back()}
-                            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors self-start"
                             aria-label="Go back"
                         >
-                           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                           </svg>
                         </button>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                        <div className="flex-1">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
                                 Request Manufacturing Batch
                             </h1>
-                            <p className="text-gray-600 mt-1">
+                            <p className="text-gray-600 mt-1 text-sm sm:text-base">
                                 Submit a request for material issuance to create a production batch
                             </p>
                         </div>
@@ -207,38 +206,42 @@ const CreateManufacturingBatchPage: React.FC = () => {
                 </div>
 
                 {success && (
-                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="mb-4 sm:mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center">
-                            <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                            <p className="text-green-800 font-medium">{success}</p>
+                            <svg className="w-5 h-5 text-green-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <p className="text-green-800 font-medium text-sm sm:text-base">{success}</p>
                         </div>
                     </div>
                 )}
 
                 {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                        <div className="flex items-center">
-                            <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <p className="text-red-800 font-medium">{error}</p>
+                    <div className="mb-4 sm:mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start">
+                            <svg className="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p className="text-red-800 font-medium text-sm sm:text-base flex-1">{error}</p>
                         </div>
                     </div>
                 )}
 
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                        <span className="ml-3 text-gray-700">Loading production plan...</span>
+                    <div className="flex flex-col sm:flex-row items-center justify-center py-8 sm:py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-500 mb-3 sm:mb-0 sm:mr-3"></div>
+                        <span className="text-gray-700 text-sm sm:text-base">Loading production plan...</span>
                     </div>
                 ) : (
-                    <div className="max-w-3xl mx-auto space-y-8">
+                    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
                         {productionPlan && (
-                            <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                            <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Plan Details</h3>
                                 <div className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <p className="text-sm text-gray-600">Plan Name:</p>
-                                            <p className="text-sm font-medium">{productionPlan.plan_name}</p>
+                                            <p className="text-sm font-medium break-words">{productionPlan.plan_name}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600">Plan Type:</p>
@@ -247,20 +250,22 @@ const CreateManufacturingBatchPage: React.FC = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-600">Date Range:</p>
-                                        <p className="text-sm font-medium">{formatDate(productionPlan.start_date)} - {formatDate(productionPlan.end_date)}</p>
+                                        <p className="text-sm font-medium break-words">
+                                          {formatDate(productionPlan.start_date)} - {formatDate(productionPlan.end_date)}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {selectedItem && (
-                            <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                            <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Details</h3>
                                 <div className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <p className="text-sm text-gray-600">Product:</p>
-                                            <p className="text-sm font-medium">{selectedItem.finished_good_id.product_name}</p>
+                                            <p className="text-sm font-medium break-words">{selectedItem.finished_good_id.product_name}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600">Current Stock:</p>
@@ -269,10 +274,10 @@ const CreateManufacturingBatchPage: React.FC = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <p className="text-sm text-gray-600">Workflow:</p>
-                                            <p className="text-sm font-medium">{selectedItem.workflow_id.workflow_name}</p>
+                                            <p className="text-sm font-medium break-words">{selectedItem.workflow_id.workflow_name}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600">Progress:</p>
@@ -285,7 +290,7 @@ const CreateManufacturingBatchPage: React.FC = () => {
                             </div>
                         )}
 
-                        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4">Batch Configuration</h3>
                             <div>
                                 <label className="block text-sm font-medium mb-2 text-gray-700">
@@ -297,7 +302,7 @@ const CreateManufacturingBatchPage: React.FC = () => {
                                     max={maxQuantity}
                                     value={batchQuantity}
                                     onChange={handleBatchQuantityChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                     required
                                 />
                                 <p className="mt-1 text-xs text-gray-500">
@@ -307,26 +312,40 @@ const CreateManufacturingBatchPage: React.FC = () => {
                         </div>
 
                         {selectedItem && selectedItem.raw_materials.length > 0 && (
-                            <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                            <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Raw Materials Required</h3>
-                                <div className="space-y-4">
+                                
+                                {/* Desktop Table View */}
+                                <div className="hidden lg:block">
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full divide-y divide-gray-200">
                                             <thead className="bg-gray-50">
                                                 <tr>
-                                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material</th>
-                                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Required for Batch</th>
-                                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Available Stock</th>
-                                                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                      Material
+                                                    </th>
+                                                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                      Required for Batch
+                                                    </th>
+                                                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                      Available Stock
+                                                    </th>
+                                                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                      Status
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
                                                 {materialsForBatch.map((material) => (
                                                     <tr key={material.material_id._id}>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{material.material_id.material_name}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{material.requirementForBatch.toFixed(2)} {material.material_id.unit}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{material.material_id.current_stock} {material.material_id.unit}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                        <td className="px-4 py-4 text-sm text-gray-900">{material.material_id.material_name}</td>
+                                                        <td className="px-4 py-4 text-sm text-gray-900 text-right">
+                                                          {material.requirementForBatch.toFixed(2)} {material.material_id.unit}
+                                                        </td>
+                                                        <td className="px-4 py-4 text-sm text-gray-900 text-right">
+                                                          {material.material_id.current_stock} {material.material_id.unit}
+                                                        </td>
+                                                        <td className="px-4 py-4 text-center">
                                                             <span
                                                                 className={`px-2 py-1 rounded-full text-xs font-medium ${
                                                                     !material.isAvailable
@@ -343,22 +362,74 @@ const CreateManufacturingBatchPage: React.FC = () => {
                                         </table>
                                     </div>
                                 </div>
+
+                                {/* Mobile Card View */}
+                                <div className="lg:hidden space-y-4">
+                                    {materialsForBatch.map((material) => (
+                                        <div key={material.material_id._id} className="border border-gray-200 rounded-lg p-4">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <h4 className="font-medium text-sm text-gray-900 flex-1 pr-2">
+                                                    {material.material_id.material_name}
+                                                </h4>
+                                                <span
+                                                    className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                                                        !material.isAvailable
+                                                            ? "bg-red-100 text-red-800"
+                                                            : "bg-green-100 text-green-800"
+                                                    }`}
+                                                >
+                                                    {!material.isAvailable ? "Insufficient" : "Available"}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 text-xs text-gray-600">
+                                                <div>
+                                                    <span className="font-medium text-gray-700">Required for Batch:</span>
+                                                    <div className="text-gray-900 font-medium">
+                                                      {material.requirementForBatch.toFixed(2)} {material.material_id.unit}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-gray-700">Available Stock:</span>
+                                                    <div className="text-gray-900 font-medium">
+                                                      {material.material_id.current_stock} {material.material_id.unit}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
-                        <div className="flex justify-end space-x-4">
-                            <Button variant="outline" onClick={() => router.back()} className="px-4 py-2">
+                        <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => router.back()} 
+                              className="w-full sm:w-auto px-4 py-2 order-2 sm:order-1"
+                            >
                                 Cancel
                             </Button>
                             
                             <Button 
                                 variant="primary"
                                 onClick={handleRequestMaterials}
-                                className="px-4 py-2"
+                                className="w-full sm:w-auto px-4 py-2 order-1 sm:order-2"
                                 disabled={submitting || batchQuantity <= 0 || batchQuantity > maxQuantity || materialsForBatch.some(m => !m.isAvailable)}
                             >
                                 {submitting ? "Requesting..." : "Request Materials for Batch"}
                             </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Loading Overlay */}
+                {submitting && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-3 max-w-sm w-full">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 flex-shrink-0"></div>
+                            <span className="text-gray-700 font-medium text-sm sm:text-base text-center">
+                                Requesting materials...
+                            </span>
                         </div>
                     </div>
                 )}

@@ -263,51 +263,53 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
   const allDocuments = getAllDocuments();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-6xl">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="container mx-auto px-4 max-w-full sm:max-w-6xl">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-4">
-            <button
-              onClick={() => router.push('/dashboard/vendors')}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-              aria-label="Go back"
-            >
-              <svg
-                className="w-5 h-5 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => router.push('/dashboard/vendors')}
+                className="p-1 sm:p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                aria-label="Go back"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                {vendor.company_name}
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {vendor.company_type} • {vendor.city}, {vendor.state}
-              </p>
+                <svg
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+              </button>
+              <div className="flex-1">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight">
+                  {vendor.company_name}
+                </h1>
+                <p className="text-gray-600 mt-1 text-sm">
+                  {vendor.company_type} • {vendor.city}, {vendor.state}
+                </p>
+              </div>
             </div>
             
-            {/* Vendor Status Badge */}
-            <span
-              className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(vendor.status)}`}
-            >
-              {vendor.status?.charAt(0).toUpperCase() + vendor.status?.slice(1)}
-            </span>
-            
-            <div className="flex space-x-3">
+            <div className="flex items-center space-x-2">
+              {/* Vendor Status Badge */}
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(vendor.status)}`}
+              >
+                {vendor.status?.charAt(0).toUpperCase() + vendor.status?.slice(1)}
+              </span>
+
               <Button
                 variant="outline"
                 onClick={handleEditVendor}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 py-1 sm:px-4 sm:py-2"
                 disabled={actionLoading}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,7 +321,7 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
                 variant="danger"
                 onClick={handleDeleteVendor}
                 disabled={actionLoading}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm px-2 py-1 sm:px-4 sm:py-2"
               >
                 {actionLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -328,7 +330,8 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 )}
-                <span>{actionLoading ? 'Deleting...' : 'Delete'}</span>
+                <span className="hidden sm:inline">{actionLoading ? 'Deleting...' : 'Delete'}</span>
+                <span className="inline sm:hidden">{actionLoading ? '...' : 'Del'}</span>
               </Button>
             </div>
           </div>
@@ -336,14 +339,14 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
 
         {/* Action Buttons for Pending Status */}
         {vendor.status === 'pending' && (
-          <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Review Vendor</h2>
-            <div className="flex space-x-4">
+          <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Review Vendor</h2>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
               <Button
                 variant="success"
                 onClick={() => handleUpdateStatus('approved')}
                 disabled={actionLoading}
-                className="flex-1"
+                className="w-full sm:flex-1 text-sm"
               >
                 {actionLoading ? 'Approving...' : 'Approve Vendor'}
               </Button>
@@ -351,7 +354,7 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
                 variant="danger"
                 onClick={() => handleUpdateStatus('rejected')}
                 disabled={actionLoading}
-                className="flex-1"
+                className="w-full sm:flex-1 text-sm"
               >
                 {actionLoading ? 'Rejecting...' : 'Reject Vendor'}
               </Button>
@@ -360,136 +363,136 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
         )}
 
         {/* Vendor Details */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Company Information */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Company Information</h2>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Company Information</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {vendor.approved_for && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Approved For</label>
-                  <p className="text-gray-900">{vendor.approved_for}</p>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Approved For</label>
+                  <p className="text-sm sm:text-base text-gray-900">{vendor.approved_for}</p>
                 </div>
               )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Company Name</label>
-                <p className="text-gray-900 font-medium">{vendor.company_name}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Company Name</label>
+                <p className="text-sm sm:text-base text-gray-900 font-medium">{vendor.company_name}</p>
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-500 mb-1">Address</label>
-                <p className="text-gray-900">{vendor.company_address}</p>
-                <p className="text-gray-600 text-sm mt-1">{vendor.city}, {vendor.state} - {vendor.pincode}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Address</label>
+                <p className="text-sm sm:text-base text-gray-900">{vendor.company_address}</p>
+                <p className="text-gray-600 text-xs mt-1">{vendor.city}, {vendor.state} - {vendor.pincode}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Mobile Number</label>
-                <p className="text-gray-900">{vendor.mobile_no}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Mobile Number</label>
+                <p className="text-sm sm:text-base text-gray-900">{vendor.mobile_no}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Phone Number</label>
-                <p className="text-gray-900">{vendor.phone_no || 'N/A'}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Phone Number</label>
+                <p className="text-sm sm:text-base text-gray-900">{vendor.phone_no || 'N/A'}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
-                <p className="text-gray-900">{vendor.mail}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                <p className="text-sm sm:text-base text-gray-900">{vendor.mail}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Website</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Website</label>
                 {vendor.website ? (
-                  <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
+                  <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-sm">
                     {vendor.website}
                   </a>
                 ) : (
-                  <p className="text-gray-900">N/A</p>
+                  <p className="text-sm text-gray-900">N/A</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Company Type</label>
-                <p className="text-gray-900">{vendor.company_type}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Company Type</label>
+                <p className="text-sm sm:text-base text-gray-900">{vendor.company_type}</p>
               </div>
 
               {vendor.partner_name && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Partner/Directors</label>
-                  <p className="text-gray-900">{vendor.partner_name}</p>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Partner/Directors</label>
+                  <p className="text-sm sm:text-base text-gray-900">{vendor.partner_name}</p>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Contact Person</label>
-                <p className="text-gray-900 font-medium">{vendor.contact_person}</p>
-                <p className="text-gray-600 text-sm">{vendor.contact_designation}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Contact Person</label>
+                <p className="text-sm sm:text-base text-gray-900 font-medium">{vendor.contact_person}</p>
+                <p className="text-gray-600 text-xs">{vendor.contact_designation}</p>
               </div>
             </div>
           </div>
 
           {/* Banking Details */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Banking Details</h2>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Banking Details</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Bank Name</label>
-                <p className="text-gray-900">{vendor.bank_name}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Bank Name</label>
+                <p className="text-sm sm:text-base text-gray-900">{vendor.bank_name}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Branch Name</label>
-                <p className="text-gray-900">{vendor.branch_name}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Branch Name</label>
+                <p className="text-sm sm:text-base text-gray-900">{vendor.branch_name}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Account Number</label>
-                <p className="text-gray-900 font-mono">{vendor.bank_account_no}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Account Number</label>
+                <p className="text-sm sm:text-base text-gray-900 font-mono">{vendor.bank_account_no}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">IFSC Code</label>
-                <p className="text-gray-900 font-mono">{vendor.bank_ifsc}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">IFSC Code</label>
+                <p className="text-sm sm:text-base text-gray-900 font-mono">{vendor.bank_ifsc}</p>
               </div>
 
               {vendor.bank_micr_code && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">MICR Code</label>
-                  <p className="text-gray-900 font-mono">{vendor.bank_micr_code}</p>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">MICR Code</label>
+                  <p className="text-sm sm:text-base text-gray-900 font-mono">{vendor.bank_micr_code}</p>
                 </div>
               )}
 
               {vendor.bank_swift_code && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">SWIFT Code</label>
-                  <p className="text-gray-900 font-mono">{vendor.bank_swift_code}</p>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">SWIFT Code</label>
+                  <p className="text-sm sm:text-base text-gray-900 font-mono">{vendor.bank_swift_code}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* GST & Registration Details */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">GST & Registration Details</h2>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">GST & Registration Details</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">GST Number</label>
-                <p className="text-gray-900 font-mono">{vendor.gst_no}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">GST Number</label>
+                <p className="text-sm sm:text-base text-gray-900 font-mono">{vendor.gst_no}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">PAN Number</label>
-                <p className="text-gray-900 font-mono">{vendor.pan_no}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-1">PAN Number</label>
+                <p className="text-sm sm:text-base text-gray-900 font-mono">{vendor.pan_no}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">MSME Unit</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">MSME Unit</label>
                 <div className="flex items-center space-x-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                     vendor.is_msme 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-gray-100 text-gray-800'
@@ -501,16 +504,16 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
 
               {vendor.is_msme && vendor.msme_reg_no && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">MSME Registration No.</label>
-                  <p className="text-gray-900 font-mono">{vendor.msme_reg_no}</p>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">MSME Registration No.</label>
+                  <p className="text-sm sm:text-base text-gray-900 font-mono">{vendor.msme_reg_no}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Documents Section */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Documents</h2>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Documents</h2>
             
             {allDocuments.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -523,10 +526,10 @@ const SingleVendorPage = ({ params }: { params: { id: string } }) => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
-                <p className="text-gray-500">This vendor has not uploaded any documents yet.</p>
+              <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
+                <FileText className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mb-2 sm:mb-4" />
+                <h3 className="text-sm sm:text-lg font-medium text-gray-900 mb-1 sm:mb-2">No Documents Found</h3>
+                <p className="text-gray-500 text-xs sm:text-sm">This vendor has not uploaded any documents yet.</p>
               </div>
             )}
           </div>

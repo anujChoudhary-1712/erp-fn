@@ -37,7 +37,7 @@ interface RawMaterial {
   };
   quantity_required: number;
   quantity_issued: number;
-  status: string; // This will now be ignored in favor of a frontend calculation
+  status: string;
   _id: string;
 }
 
@@ -110,7 +110,6 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
       const fetchedPlan = planResponse.data.productionPlan;
       setPlan(fetchedPlan);
 
-      // Fetch related data
       try {
         const requestsResponse = await MaterialRequestApis.getAllMaterialRequests({ planId: params.id });
         if (requestsResponse.status === 200 && requestsResponse.data?.requests) {
@@ -148,15 +147,12 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
     }
   }, [params?.id]);
 
-  // --- MODIFIED: Effect to calculate insufficient materials based on live stock data ---
   useEffect(() => {
     if (plan) {
       const insufficient = plan.production_items
         .flatMap(item => item.raw_materials || [])
-        // The check is now done on the frontend, ignoring the backend status
         .filter(m => m && m.material_id.current_stock < m.quantity_required)
         .map(m => m.material_id._id)
-        // Get unique IDs
         .filter((id, index, self) => self.indexOf(id) === index);
       
       setInsufficientMaterials(insufficient);
@@ -249,44 +245,44 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
   };
 
   const renderMaterialRequests = () => (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+    <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Material Issuance Requests</h3>
       {issuanceRequests.length > 0 ? (
         <div className="space-y-4">
           {issuanceRequests.map(req => (
-            <div key={req._id} className="p-4 bg-gray-50 rounded-lg border flex justify-between items-center">
-              <div>
-                <p className="font-medium text-gray-800">Request #{req.request_number}</p>
-                <p className="text-sm text-gray-600 mt-1">
+            <div key={req._id} className="p-3 sm:p-4 bg-gray-50 rounded-lg border flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <div className="flex-1">
+                <p className="font-medium text-gray-800 text-sm sm:text-base">Request #{req.request_number}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
                   Requested at: {safeFormatDate(req.created_at || req.createdAt)}
                 </p>
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(req.status)}`}>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium border self-start sm:self-auto ${getStatusColor(req.status)}`}>
                 {req.status}
               </span>
             </div>
           ))}
         </div>
-      ) : <p className="text-gray-500">No material issuance requests for this plan yet.</p>}
+      ) : <p className="text-gray-500 text-sm sm:text-base">No material issuance requests for this plan yet.</p>}
     </div>
   );
 
   const renderCreatedBatches = () => (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+    <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Created Manufacturing Batches</h3>
       {batches.length > 0 ? (
         <div className="space-y-4">
           {batches.map(batch => (
-            <div key={batch._id} className="p-4 bg-gray-50 rounded-lg border flex justify-between items-center">
-              <div>
-                <p className="font-medium text-gray-800">Batch #{batch.batch_number}</p>
-                <p className="text-sm text-gray-600 mt-1">Status: {batch.status}</p>
+            <div key={batch._id} className="p-3 sm:p-4 bg-gray-50 rounded-lg border flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <div className="flex-1">
+                <p className="font-medium text-gray-800 text-sm sm:text-base">Batch #{batch.batch_number}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">Status: {batch.status}</p>
               </div>
-              <span className="text-sm text-gray-700">{batch.quantity_planned} units</span>
+              <span className="text-xs sm:text-sm text-gray-700 self-start sm:self-auto">{batch.quantity_planned} units</span>
             </div>
           ))}
         </div>
-      ) : <p className="text-gray-500">No manufacturing batches created for this plan yet.</p>}
+      ) : <p className="text-gray-500 text-sm sm:text-base">No manufacturing batches created for this plan yet.</p>}
     </div>
   );
 
@@ -298,9 +294,9 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
     return (
       <div className="space-y-6">
         {/* Summary Card */}
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <div className="bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Plan Summary</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div>
               <p className="text-sm text-gray-600">Status</p>
               <div className="mt-1">
@@ -309,11 +305,11 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
             </div>
             <div>
               <p className="text-sm text-gray-600">Date Range</p>
-              <p className="text-sm font-medium">{safeFormatDate(plan.start_date)} - {safeFormatDate(plan.end_date)}</p>
+              <p className="text-xs sm:text-sm font-medium mt-1 break-words">{safeFormatDate(plan.start_date)} - {safeFormatDate(plan.end_date)}</p>
             </div>
-            <div>
+            <div className="sm:col-span-2 lg:col-span-1">
               <p className="text-sm text-gray-600">Type</p>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
+              <span className={`px-3 py-1 rounded-full text-sm font-medium border mt-1 inline-block ${
                   plan.plan_type === "Daily" ? "border-green-300 text-green-700 bg-green-50" 
                   : plan.plan_type === "Weekly" ? "border-blue-300 text-blue-700 bg-blue-50"
                   : "border-purple-300 text-purple-700 bg-purple-50"
@@ -323,7 +319,7 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
         </div>
 
         {/* Progress Card */}
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <div className="bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Progress</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -331,28 +327,28 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
               <span className="text-sm font-medium text-gray-900">{progress.completed}/{progress.total} items</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
+              <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress.percentage}%` }}></div>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Materials</span>
-              <span className={`text-sm font-medium ${materialStatus.color}`}>{materialStatus.status}</span>
+              <span className={`text-xs sm:text-sm font-medium ${materialStatus.color} text-right flex-1 ml-2`}>{materialStatus.status}</span>
             </div>
           </div>
         </div>
 
         {/* Actions Card */}
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <div className="bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
             {plan.status === "Draft" && (
               insufficientMaterials.length > 0 ? (
-                <Button variant="warning" onClick={handleRequestPurchase} disabled={loading}>Request Purchase</Button>
+                <Button variant="warning" onClick={handleRequestPurchase} disabled={loading} className="w-full sm:w-auto">Request Purchase</Button>
               ) : (
-                <Button variant="success" onClick={handleActivatePlan} disabled={loading}>{loading ? "Activating..." : "Activate Plan"}</Button>
+                <Button variant="success" onClick={handleActivatePlan} disabled={loading} className="w-full sm:w-auto">{loading ? "Activating..." : "Activate Plan"}</Button>
               )
             )}
-            {plan.status === "Active" && <Button variant="primary" onClick={() => setActiveTab("products")}>Create Manufacturing Batch</Button>}
-            <Button variant="outline" onClick={() => router.push("/dashboard/planning")}>Back to Plans</Button>
+            {plan.status === "Active" && <Button variant="primary" onClick={() => setActiveTab("products")} className="w-full sm:w-auto">Create Manufacturing Batch</Button>}
+            <Button variant="outline" onClick={() => router.push("/dashboard/planning")} className="w-full sm:w-auto">Back to Plans</Button>
           </div>
         </div>
       </div>
@@ -367,7 +363,7 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
         {renderMaterialRequests()}
         {renderCreatedBatches()}
         
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <div className="bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Items</h3>
           {!plan.production_items?.length ? (
             <p className="text-gray-500">No production items found in this plan.</p>
@@ -377,18 +373,18 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
                 if (!item) return null;
                 return (
                   <div key={item._id} className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-3">
+                      <div className="flex-1">
                         <div className="flex items-center">
-                          <span className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs mr-2">{index + 1}</span>
-                          <h4 className="text-lg font-medium text-gray-900">{item.finished_good_id?.product_name || "N/A"}</h4>
+                          <span className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs mr-2 flex-shrink-0">{index + 1}</span>
+                          <h4 className="text-base sm:text-lg font-medium text-gray-900 break-words">{item.finished_good_id?.product_name || "N/A"}</h4>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">Workflow: {item.workflow_id?.workflow_name || "N/A"}</p>
+                        <p className="text-sm text-gray-600 mt-1 ml-8 break-words">Workflow: {item.workflow_id?.workflow_name || "N/A"}</p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}>{item.status}</span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium border self-start sm:self-auto ${getStatusColor(item.status)}`}>{item.status}</span>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                       <div>
                         <p className="text-sm text-gray-600">Quantity</p>
                         <p className="text-sm font-medium">{item.quantity_produced || 0}/{item.quantity_planned || 0} {item.finished_good_id?.unit || "units"}</p>
@@ -396,7 +392,7 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
                       <div>
                         <p className="text-sm text-gray-600">Progress</p>
                         <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${item.quantity_planned > 0 ? ((item.quantity_produced || 0) / item.quantity_planned) * 100 : 0}%` }}></div>
+                          <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${item.quantity_planned > 0 ? ((item.quantity_produced || 0) / item.quantity_planned) * 100 : 0}%` }}></div>
                         </div>
                       </div>
                     </div>
@@ -404,46 +400,78 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
                     {item.raw_materials?.length > 0 && (
                       <div className="mt-4">
                         <h5 className="text-sm font-medium text-gray-700 mb-2">Raw Materials</h5>
-                        <div className="bg-white border rounded-md overflow-hidden">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Material</th>
-                                <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Required</th>
-                                <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Issued</th>
-                                <th scope="col" className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                              {item.raw_materials.map((material) => {
-                                if (!material) return null;
-                                // --- MODIFIED: Live calculation for status ---
-                                const isInsufficient = material.material_id.current_stock < material.quantity_required;
-                                const calculatedStatus = isInsufficient ? "Insufficient" : "Available";
-                                return (
-                                  <tr key={material._id}>
-                                    <td className="px-4 py-2 text-sm text-gray-900">{material.material_id?.material_name || "N/A"}</td>
-                                    <td className="px-4 py-2 text-sm text-gray-900 text-right">{material.quantity_required || 0} {material.material_id?.unit}</td>
-                                    <td className="px-4 py-2 text-sm text-gray-900 text-right">{material.quantity_issued || 0} {material.material_id?.unit}</td>
-                                    <td className="px-4 py-2 text-sm text-center">
-                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                          isInsufficient ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
-                                        }`}>
-                                        {calculatedStatus}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                        
+                        {/* Desktop Table View */}
+                        <div className="hidden lg:block bg-white border rounded-md overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Material</th>
+                                  <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Required</th>
+                                  <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Issued</th>
+                                  <th scope="col" className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {item.raw_materials.map((material) => {
+                                  if (!material) return null;
+                                  const isInsufficient = material.material_id.current_stock < material.quantity_required;
+                                  const calculatedStatus = isInsufficient ? "Insufficient" : "Available";
+                                  return (
+                                    <tr key={material._id}>
+                                      <td className="px-4 py-2 text-sm text-gray-900">{material.material_id?.material_name || "N/A"}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900 text-right">{material.quantity_required || 0} {material.material_id?.unit}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900 text-right">{material.quantity_issued || 0} {material.material_id?.unit}</td>
+                                      <td className="px-4 py-2 text-sm text-center">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                            isInsufficient ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
+                                          }`}>
+                                          {calculatedStatus}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="lg:hidden space-y-3">
+                          {item.raw_materials.map((material) => {
+                            if (!material) return null;
+                            const isInsufficient = material.material_id.current_stock < material.quantity_required;
+                            const calculatedStatus = isInsufficient ? "Insufficient" : "Available";
+                            return (
+                              <div key={material._id} className="bg-white border rounded-lg p-3">
+                                <div className="flex justify-between items-start mb-2">
+                                  <h6 className="font-medium text-sm text-gray-900 flex-1 pr-2">{material.material_id?.material_name || "N/A"}</h6>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                                      isInsufficient ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
+                                    }`}>
+                                    {calculatedStatus}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                                  <div>
+                                    <span className="font-medium">Required:</span> {material.quantity_required || 0} {material.material_id?.unit}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Issued:</span> {material.quantity_issued || 0} {material.material_id?.unit}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
                     
                     {plan.status === "Active" && item.status !== "Completed" && (
                       <div className="mt-4 flex justify-end">
-                        <Button variant="primary" onClick={() => handleCreateBatch(index)} className="text-sm" disabled={loading}>Create Batch</Button>
+                        <Button variant="primary" onClick={() => handleCreateBatch(index)} className="text-sm w-full sm:w-auto" disabled={loading}>Create Batch</Button>
                       </div>
                     )}
                   </div>
@@ -452,8 +480,8 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
             </div>
           )}
           
-          <div className="mt-6 flex justify-between">
-            <Button variant="outline" onClick={() => setActiveTab("overview")}>Back to Overview</Button>
+          <div className="mt-6 flex flex-col sm:flex-row justify-between gap-3">
+            <Button variant="outline" onClick={() => setActiveTab("overview")} className="w-full sm:w-auto order-2 sm:order-1">Back to Overview</Button>
           </div>
         </div>
       </div>
@@ -462,10 +490,10 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading production plan...</p>
+          <div className="animate-spin rounded-full h-16 sm:h-32 w-16 sm:w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 text-sm sm:text-base">Loading production plan...</p>
         </div>
       </div>
     );
@@ -473,14 +501,14 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center max-w-md w-full">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Plan</h2>
-            <p className="text-red-600">{error}</p>
-            <div className="mt-4 space-x-3">
-              <Button variant="outline" onClick={() => fetchPlanDetails()}>Retry</Button>
-              <Button variant="outline" onClick={() => router.push("/dashboard/planning")}>Back to Plans</Button>
+            <p className="text-red-600 text-sm sm:text-base mb-4">{error}</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button variant="outline" onClick={() => fetchPlanDetails()} className="w-full sm:w-auto">Retry</Button>
+              <Button variant="outline" onClick={() => router.push("/dashboard/planning")} className="w-full sm:w-auto">Back to Plans</Button>
             </div>
           </div>
         </div>
@@ -490,46 +518,62 @@ const SinglePlanPage = ({ params }: { params: { id: string } }) => {
 
   if (!plan) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-gray-600">No plan data available</p>
-          <Button variant="outline" onClick={() => router.push("/dashboard/planning")} className="mt-4">Back to Plans</Button>
+          <p className="text-gray-600 mb-4">No plan data available</p>
+          <Button variant="outline" onClick={() => router.push("/dashboard/planning")} className="w-full sm:w-auto">Back to Plans</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{plan.plan_name}</h1>
-            <p className="text-gray-600 mt-1">Production Plan Details</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{plan.plan_name}</h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">Production Plan Details</p>
           </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(plan.status)}`}>{plan.status}</span>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium border self-start sm:self-auto ${getStatusColor(plan.status)}`}>{plan.status}</span>
         </div>
       </div>
 
       {/* Error Display */}
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">{error}</p>
-          <button onClick={() => setError("")} className="mt-2 text-sm text-red-500 hover:text-red-700">Dismiss</button>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+            <p className="text-red-600 flex-1 text-sm sm:text-base">{error}</p>
+            <button onClick={() => setError("")} className="text-sm text-red-500 hover:text-red-700 self-start sm:self-auto">Dismiss</button>
+          </div>
         </div>
       )}
 
       {/* Tabs */}
       <div className="mb-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            <button onClick={() => setActiveTab("overview")} className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "overview" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}>Overview</button>
-            <button onClick={() => setActiveTab("products")} className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "products" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}>Production Items</button>
+        <div className="border-b border-gray-200 overflow-x-auto">
+          <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-max">
+            <button 
+              onClick={() => setActiveTab("overview")} 
+              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                activeTab === "overview" 
+                  ? "border-blue-500 text-blue-600" 
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Overview
+            </button>
+            <button 
+              onClick={() => setActiveTab("products")} 
+              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                activeTab === "products" 
+                  ? "border-blue-500 text-blue-600" 
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Production Items
+            </button>
           </nav>
         </div>
       </div>

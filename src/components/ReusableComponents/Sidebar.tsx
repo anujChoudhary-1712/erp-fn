@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight, LogOut, Bell } from "lucide-react";
 import { useUser } from "@/context/UserContext";

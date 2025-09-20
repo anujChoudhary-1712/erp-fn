@@ -733,230 +733,230 @@ const SingleMaterialPage = ({ params }: { params: { id: string } }) => {
 
 // Wastage Modal Component
 const WastageModal: React.FC<WastageModalProps> = ({
-  isOpen,
-  onClose,
-  onSubmit,
-  material,
-  isLoading,
-}) => {
-  const [wastageRecords, setWastageRecords] = useState<WastageRecord[]>([]);
-
-  // Initialize wastage records
-  useEffect(() => {
-    if (material.wastage_records) {
-      setWastageRecords([...material.wastage_records]);
-    } else {
-      setWastageRecords([]);
-    }
-  }, [material]);
-
-  // Add new wastage record
-  const addWastageRecord = () => {
-    const newRecord: WastageRecord = {
-      quantity_wasted: 0,
-      checking_date: new Date().toISOString().split('T')[0],
-      reason_for_wastage: '',
+    isOpen,
+    onClose,
+    onSubmit,
+    material,
+    isLoading,
+  }) => {
+    const [wastageRecords, setWastageRecords] = useState<WastageRecord[]>([]);
+  
+    // Initialize wastage records
+    useEffect(() => {
+      if (material.wastage_records) {
+        setWastageRecords([...material.wastage_records]);
+      } else {
+        setWastageRecords([]);
+      }
+    }, [material]);
+  
+    // Add new wastage record
+    const addWastageRecord = () => {
+      const newRecord: WastageRecord = {
+        quantity_wasted: 0,
+        checking_date: new Date().toISOString().split('T')[0],
+        reason_for_wastage: '',
+      };
+      setWastageRecords([...wastageRecords, newRecord]);
     };
-    setWastageRecords([...wastageRecords, newRecord]);
-  };
-
-  // Update wastage record
-  const updateWastageRecord = (index: number, field: keyof WastageRecord, value: string | number) => {
-    const updatedRecords = [...wastageRecords];
-    updatedRecords[index] = {
-      ...updatedRecords[index],
-      [field]: value,
+  
+    // Update wastage record
+    const updateWastageRecord = (index: number, field: keyof WastageRecord, value: string | number) => {
+      const updatedRecords = [...wastageRecords];
+      updatedRecords[index] = {
+        ...updatedRecords[index],
+        [field]: value,
+      };
+      setWastageRecords(updatedRecords);
     };
-    setWastageRecords(updatedRecords);
-  };
-
-  // Remove wastage record
-  const removeWastageRecord = (index: number) => {
-    const updatedRecords = wastageRecords.filter((_, i) => i !== index);
-    setWastageRecords(updatedRecords);
-  };
-
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate records
-    const validRecords = wastageRecords.filter(record => 
-      record.quantity_wasted > 0 && 
-      record.checking_date && 
-      record.reason_for_wastage.trim()
-    );
-    
-    onSubmit(validRecords);
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">
-            Update Wastage Records - {material.material_name}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
-            disabled={isLoading}
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-4">
-                <p className="text-sm text-gray-600">
-                  Add or update wastage records for periodic material inspections
-                </p>
-                <button
-                  type="button"
-                  onClick={addWastageRecord}
-                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
-                  disabled={isLoading}
-                >
-                  + Add Record
-                </button>
-              </div>
-
-              {wastageRecords.length === 0 ? (
-                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No wastage records</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Click &quot;Add Record&quot; to start tracking material wastage
+  
+    // Remove wastage record
+    const removeWastageRecord = (index: number) => {
+      const updatedRecords = wastageRecords.filter((_, i) => i !== index);
+      setWastageRecords(updatedRecords);
+    };
+  
+    // Handle form submission
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      // Validate records
+      const validRecords = wastageRecords.filter(record => 
+        record.quantity_wasted > 0 && 
+        record.checking_date && 
+        record.reason_for_wastage.trim()
+      );
+      
+      onSubmit(validRecords);
+    };
+  
+    if (!isOpen) return null;
+  
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-lg md:max-w-2xl lg:max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+            <h3 className="text-lg font-medium text-gray-900">
+              Update Wastage Records - {material.material_name}
+            </h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-500"
+              disabled={isLoading}
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+  
+          <form onSubmit={handleSubmit} className="flex flex-col flex-grow">
+            <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-grow">
+              <div className="mb-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                  <p className="text-sm text-gray-600">
+                    Add or update wastage records for periodic material inspections
                   </p>
+                  <button
+                    type="button"
+                    onClick={addWastageRecord}
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                    disabled={isLoading}
+                  >
+                    + Add Record
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {wastageRecords.map((record, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="text-sm font-medium text-gray-700">
-                          Wastage Record #{index + 1}
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => removeWastageRecord(index)}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                          disabled={isLoading}
-                        >
-                          Remove
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Checking Date */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Checking Date <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="date"
-                            value={record.checking_date}
-                            onChange={(e) => updateWastageRecord(index, 'checking_date', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
+  
+                {wastageRecords.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No wastage records</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Click &quot;Add Record&quot; to start tracking material wastage
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {wastageRecords.map((record, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-center mb-3">
+                          <h4 className="text-sm font-medium text-gray-700">
+                            Wastage Record #{index + 1}
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => removeWastageRecord(index)}
+                            className="text-red-600 hover:text-red-800 text-sm"
                             disabled={isLoading}
-                          />
+                          >
+                            Remove
+                          </button>
                         </div>
-
-                        {/* Quantity Wasted */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Quantity Wasted <span className="text-red-500">*</span>
-                          </label>
-                          <div className="flex">
+  
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Checking Date */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Checking Date <span className="text-red-500">*</span>
+                            </label>
                             <input
-                              type="number"
-                              value={record.quantity_wasted}
-                              onChange={(e) => updateWastageRecord(index, 'quantity_wasted', parseFloat(e.target.value) || 0)}
-                              className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              min="0"
-                              step="0.01"
+                              type="date"
+                              value={record.checking_date}
+                              onChange={(e) => updateWastageRecord(index, 'checking_date', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                               required
                               disabled={isLoading}
                             />
-                            <span className="px-3 py-2 bg-gray-100 text-gray-700 border border-l-0 border-gray-300 rounded-r-md">
-                              {material.unit}
-                            </span>
+                          </div>
+  
+                          {/* Quantity Wasted */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Quantity Wasted <span className="text-red-500">*</span>
+                            </label>
+                            <div className="flex">
+                              <input
+                                type="number"
+                                value={record.quantity_wasted}
+                                onChange={(e) => updateWastageRecord(index, 'quantity_wasted', parseFloat(e.target.value) || 0)}
+                                className="flex-grow px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                min="0"
+                                step="0.01"
+                                required
+                                disabled={isLoading}
+                              />
+                              <span className="px-3 py-2 bg-gray-100 text-gray-700 border border-l-0 border-gray-300 rounded-r-md">
+                                {material.unit}
+                              </span>
+                            </div>
+                          </div>
+  
+                          {/* Reason */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Reason for Wastage <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={record.reason_for_wastage}
+                              onChange={(e) => updateWastageRecord(index, 'reason_for_wastage', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Enter reason for wastage"
+                              required
+                              disabled={isLoading}
+                            />
                           </div>
                         </div>
-
-                        {/* Reason */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Reason for Wastage <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={record.reason_for_wastage}
-                            onChange={(e) => updateWastageRecord(index, 'reason_for_wastage', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Enter reason for wastage"
-                            required
-                            disabled={isLoading}
-                          />
-                        </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+  
+              {/* Summary */}
+              {wastageRecords.length > 0 && (
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">Summary</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-700">Total Records:</span>
+                      <span className="ml-2 font-medium text-blue-900">{wastageRecords.length}</span>
                     </div>
-                  ))}
+                    <div>
+                      <span className="text-blue-700">Total Wastage:</span>
+                      <span className="ml-2 font-medium text-blue-900">
+                        {wastageRecords.reduce((sum, record) => sum + (record.quantity_wasted || 0), 0)} {material.unit}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-
-            {/* Summary */}
-            {wastageRecords.length > 0 && (
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="text-sm font-medium text-blue-900 mb-2">Summary</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-blue-700">Total Records:</span>
-                    <span className="ml-2 font-medium text-blue-900">{wastageRecords.length}</span>
-                  </div>
-                  <div>
-                    <span className="text-blue-700">Total Wastage:</span>
-                    <span className="ml-2 font-medium text-blue-900">
-                      {wastageRecords.reduce((sum, record) => sum + (record.quantity_wasted || 0), 0)} {material.unit}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isLoading}
-            >
-              {isLoading ? "Saving..." : "Save Wastage Records"}
-            </button>
-          </div>
-        </form>
+  
+            <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col-reverse sm:flex-row justify-end sm:space-x-3 space-y-2 sm:space-y-0 flex-shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
+              >
+                {isLoading ? "Saving..." : "Save Wastage Records"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 // Edit Material Modal Component (keeping the existing one)
 const EditMaterialModal: React.FC<any> = ({

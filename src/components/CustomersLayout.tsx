@@ -18,6 +18,7 @@ import {
   Wrench,
   ClipboardList,
   AlertCircle,
+  LogOut,
 } from "lucide-react";
 import MobileHeader from "./ReusableComponents/MobileHeader";
 import { useUser } from "@/context/UserContext";
@@ -39,7 +40,7 @@ const allNavigationItems = [
     href: "/dashboard/orders",
     requiredRoles: ["orders", "admin"],
   },
- {
+  {
     id: "inventory",
     label: "Inventory",
     icon: <Package size={20} />,
@@ -160,7 +161,8 @@ const allNavigationItems = [
 ];
 
 // Define mobile tab priorities (items that should appear in bottom navigation)
-const mobilePriorityItems = ["dashboard", "orders", "store", "production"];
+// Changed to remove "production" so its children can be accessed via the "More" menu
+const mobilePriorityItems = ["dashboard", "orders", "inventory"];
 
 interface CustomersLayoutProps {
   children: React.ReactNode;
@@ -171,12 +173,11 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
   children,
   currentPath = "/",
 }) => {
-  const { user, organization, isLoading } = useUser(); // Now we get organization from context
+  const { user, organization, isLoading, logout } = useUser(); // Destructure logout
   const pathname = usePathname();
 
   // Function to check if user has access to a specific item
   const hasAccess = (itemId: string, requiredRoles: string[]) => {
-
     // Explicitly grant access to the purchase request page for everyone
     if (itemId === "purchase-request") {
       console.log("Purchase request - granting access");
@@ -359,6 +360,15 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
       (item) => !mobilePriorityItems.includes(item.id)
     );
 
+    // Add a logout button to the end of the moreItems array
+    moreItems.push({
+      id: "logout",
+      label: "Logout",
+      icon: <LogOut size={20} />,
+      href: "#",
+      requiredRoles: [],
+    });
+
     const mainTabItems = [
       ...priorityItems,
       ...(moreItems.length > 0
@@ -493,6 +503,7 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
           mainTabItems={mainTabItems}
           moreMenuItems={moreMenuItems}
           currentPath={currentPath}
+          onLogout={() => logout("organization")} // Pass the logout function
         />
       </div>
     </div>

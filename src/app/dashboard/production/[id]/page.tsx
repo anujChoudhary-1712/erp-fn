@@ -232,12 +232,12 @@ const QualityCheckModal: React.FC<{
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl">
-        <h3 className="text-xl font-semibold mb-4">Perform Quality Check</h3>
-        <div className="max-h-[75vh] overflow-y-auto pr-4 space-y-6">
-          <div className="p-4 border rounded-lg">
-            <h4 className="font-semibold text-gray-800 mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white p-3 sm:p-6 rounded-lg shadow-lg w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+        <h3 className="text-lg sm:text-xl font-semibold mb-4">Perform Quality Check</h3>
+        <div className="space-y-4 sm:space-y-6">
+          <div className="p-3 sm:p-4 border rounded-lg">
+            <h4 className="font-semibold text-gray-800 mb-4 text-sm sm:text-base">
               Detailed Sample Analysis
             </h4>
             <InputField
@@ -254,16 +254,16 @@ const QualityCheckModal: React.FC<{
                   key={sample.sample_number}
                   className="p-3 bg-gray-50 border rounded-md"
                 >
-                  <h5 className="font-medium text-gray-700 mb-2">
+                  <h5 className="font-medium text-gray-700 mb-2 text-sm sm:text-base">
                     Sample #{sample.sample_number}
                   </h5>
                   {sample.parameters.map((param, paramIndex) => (
                     <div
                       key={paramIndex}
-                      className="grid grid-cols-3 gap-4 items-center mb-2"
+                      className="flex flex-col sm:grid sm:grid-cols-3 gap-2 sm:gap-4 sm:items-center mb-2"
                     >
                       <div className="col-span-2">
-                        <label className="text-xs text-gray-500">
+                        <label className="text-xs text-gray-500 block">
                           {param.parameter_name} (Spec: {param.specification})
                         </label>
                         <InputField
@@ -281,7 +281,7 @@ const QualityCheckModal: React.FC<{
                           className="mt-1"
                         />
                       </div>
-                      <div className="flex items-center pt-5">
+                      <div className="flex items-center">
                         <input
                           id={`pass-${sampleIndex}-${paramIndex}`}
                           type="checkbox"
@@ -310,8 +310,8 @@ const QualityCheckModal: React.FC<{
             </div>
           </div>
 
-          <div className="p-4 border rounded-lg">
-            <h4 className="font-semibold text-gray-800 mb-2">
+          <div className="p-3 sm:p-4 border rounded-lg">
+            <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">
               Final Disposition
             </h4>
             <p className="text-sm text-gray-600 mb-4">
@@ -362,20 +362,21 @@ const QualityCheckModal: React.FC<{
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={2}
-                  className="mt-1 w-full p-2 border rounded-md"
+                  className="mt-1 w-full p-2 border rounded-md text-sm"
                 />
               </div>
             </div>
           </div>
         </div>
-        <div className="flex justify-end space-x-4 mt-6 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 mt-6 pt-4 border-t">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
             variant="primary"
             onClick={handleSubmit}
             disabled={submitting || !!error}
+            className="w-full sm:w-auto"
           >
             {submitting ? "Submitting..." : "Submit Results"}
           </Button>
@@ -427,10 +428,11 @@ const ResolveReworkModal: React.FC<{
     };
     onSubmit(reworkItem._id, payload);
   };
+  
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-        <h3 className="text-lg font-semibold mb-2">Resolve Rework Item</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-lg">
+        <h3 className="text-base sm:text-lg font-semibold mb-2">Resolve Rework Item</h3>
         <p className="text-sm text-gray-600 mb-4">
           Result for{" "}
           <span className="font-bold">
@@ -464,18 +466,19 @@ const ResolveReworkModal: React.FC<{
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              className="mt-1 w-full p-2 border rounded-md"
+              className="mt-1 w-full p-2 border rounded-md text-sm"
             />
           </div>
         </div>
-        <div className="flex justify-end space-x-4 mt-6">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 mt-6">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
             variant="primary"
             onClick={handleSubmit}
             disabled={submitting || !!error}
+            className="w-full sm:w-auto"
           >
             {submitting ? "Submitting..." : "Submit Resolution"}
           </Button>
@@ -558,7 +561,7 @@ const PrintableBatchReport = forwardRef<HTMLDivElement, PrintableBatchReportProp
         </div>
       </div>
 
-      {/* Test Summary Table - NOW AT THE TOP */}
+      {/* Test Summary Table - positioned at the top */}
       <div className="mb-8">
         <h3 className="text-sm font-medium mb-3 text-center">Test Summary</h3>
         <table className="w-full border-collapse border border-black text-sm">
@@ -579,7 +582,7 @@ const PrintableBatchReport = forwardRef<HTMLDivElement, PrintableBatchReportProp
         </table>
       </div>
 
-      {/* Detailed Test Results - Now comes AFTER Test Summary */}
+      {/* Detailed Test Results - comes after Test Summary */}
       {batch.stages_history && batch.stages_history.length > 0 && (
         <div className="mb-8">
           {batch.stages_history.map((history, stageIndex) => (
@@ -618,7 +621,6 @@ const PrintableBatchReport = forwardRef<HTMLDivElement, PrintableBatchReportProp
                         </tbody>
                       </table>
                     ) : (
-                      // Show message when no sample data exists
                       <p className="text-sm text-gray-600 italic">No sample data available for this quality check.</p>
                     )}
                   </div>
@@ -747,26 +749,27 @@ const SingleManufacturingBatchPage = ({
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 max-w-5xl space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-4 sm:space-y-0">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 break-words">
             Batch #{batch.batch_number}
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-sm sm:text-base text-gray-600 mt-1 break-words">
             Product: {batch.finished_good_id.product_name}
           </p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 flex-shrink-0">
           <Button
             variant="outline"
             onClick={handlePrint}
+            className="w-full sm:w-auto text-sm"
           >
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
           <span
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border ${getStatusColor(
+            className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border text-center ${getStatusColor(
               batch.status
             )}`}
           >
@@ -776,7 +779,7 @@ const SingleManufacturingBatchPage = ({
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg">
+        <div className="p-3 sm:p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
           {error}
         </div>
       )}
@@ -792,35 +795,35 @@ const SingleManufacturingBatchPage = ({
         />
       </div>
 
-      <div className="space-y-6">
-        <div className="bg-white p-6 rounded-lg border shadow-sm">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
             Batch Progress
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <p className="text-sm text-gray-500">PLANNED</p>
-              <p className="text-2xl font-bold text-gray-800">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center">
+            <div className="p-2 sm:p-3">
+              <p className="text-xs sm:text-sm text-gray-500 font-medium">PLANNED</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-800">
                 {batch.quantity_planned}
               </p>
             </div>
-            <div className="p-2 bg-green-50 rounded-lg">
-              <p className="text-sm text-green-600 font-semibold">
+            <div className="p-2 sm:p-3 bg-green-50 rounded-lg">
+              <p className="text-xs sm:text-sm text-green-600 font-semibold">
                 PRODUCED (GOOD)
               </p>
-              <p className="text-2xl font-bold text-green-700">
+              <p className="text-lg sm:text-2xl font-bold text-green-700">
                 {batch.quantity_produced}
               </p>
             </div>
-            <div className="p-2 bg-orange-50 rounded-lg">
-              <p className="text-sm text-orange-600 font-semibold">IN REWORK</p>
-              <p className="text-2xl font-bold text-orange-700">
+            <div className="p-2 sm:p-3 bg-orange-50 rounded-lg">
+              <p className="text-xs sm:text-sm text-orange-600 font-semibold">IN REWORK</p>
+              <p className="text-lg sm:text-2xl font-bold text-orange-700">
                 {batch.quantity_in_rework}
               </p>
             </div>
-            <div className="p-2 bg-red-50 rounded-lg">
-              <p className="text-sm text-red-600 font-semibold">REJECTED</p>
-              <p className="text-2xl font-bold text-red-800">
+            <div className="p-2 sm:p-3 bg-red-50 rounded-lg">
+              <p className="text-xs sm:text-sm text-red-600 font-semibold">REJECTED</p>
+              <p className="text-lg sm:text-2xl font-bold text-red-800">
                 {batch.quantity_rejected}
               </p>
             </div>
@@ -828,47 +831,49 @@ const SingleManufacturingBatchPage = ({
         </div>
 
         {batch.production_plan_id && (
-          <div className="bg-white p-6 rounded-lg border shadow-sm mt-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
               Production Plan Details
             </h3>
             <div className="space-y-2">
-              <p className="text-gray-700">
+              <p className="text-sm sm:text-base text-gray-700">
                 <span className="font-medium">Plan Name:</span>{" "}
-                {batch.production_plan_id.plan_name}
+                <span className="break-words">{batch.production_plan_id.plan_name}</span>
               </p>
-              <p className="text-gray-700">
+              <p className="text-sm sm:text-base text-gray-700">
                 <span className="font-medium">Plan Type:</span>{" "}
                 {batch.production_plan_id.plan_type}
               </p>
-              <p className="text-gray-700">
+              <p className="text-sm sm:text-base text-gray-700">
                 <span className="font-medium">Dates:</span>{" "}
-                {formatDate(batch.production_plan_id.start_date)} -{" "}
-                {formatDate(batch.production_plan_id.end_date)}
+                <span className="break-words">
+                  {formatDate(batch.production_plan_id.start_date)} -{" "}
+                  {formatDate(batch.production_plan_id.end_date)}
+                </span>
               </p>
             </div>
           </div>
         )}
 
         {batch.raw_materials_used && batch.raw_materials_used.length > 0 && (
-          <div className="bg-white p-6 rounded-lg border shadow-sm mt-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
               Raw Materials Used
             </h3>
             <div className="space-y-4">
               {batch.raw_materials_used.map((material, index) => (
                 <div
                   key={index}
-                  className="p-4 bg-gray-50 rounded-lg border"
+                  className="p-3 sm:p-4 bg-gray-50 rounded-lg border"
                 >
-                  <p className="text-gray-800 font-medium">
+                  <p className="text-sm sm:text-base text-gray-800 font-medium break-words">
                     Material: {material.material_id.material_name}
                   </p>
-                  <p className="text-gray-600">
+                  <p className="text-sm text-gray-600 mt-1">
                     <span className="font-medium">Quantity Issued:</span>{" "}
                     {material.quantity_issued} {material.material_id.unit}
                   </p>
-                  <p className="text-gray-600">
+                  <p className="text-sm text-gray-600 break-words">
                     <span className="font-medium">Lot Number(s):</span>{" "}
                     {material.lot_numbers.join(", ")}
                   </p>
@@ -879,10 +884,10 @@ const SingleManufacturingBatchPage = ({
         )}
 
         {pendingReworkItems.length > 0 && (
-          <div className="bg-orange-50 p-6 rounded-lg border border-orange-200 mt-6">
+          <div className="bg-orange-50 p-4 sm:p-6 rounded-lg border border-orange-200">
             <div className="flex items-center mb-4">
-              <AlertTriangle className="h-6 w-6 text-orange-600 mr-3" />
-              <h3 className="text-lg font-semibold text-orange-900">
+              <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 mr-3 flex-shrink-0" />
+              <h3 className="text-base sm:text-lg font-semibold text-orange-900">
                 Items Pending Rework
               </h3>
             </div>
@@ -890,13 +895,13 @@ const SingleManufacturingBatchPage = ({
               {pendingReworkItems.map((item) => (
                 <div
                   key={item._id}
-                  className="p-3 bg-white rounded-md border flex justify-between items-center"
+                  className="p-3 bg-white rounded-md border flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0"
                 >
-                  <div>
-                    <p className="font-medium text-gray-800">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm sm:text-base font-medium text-gray-800 break-words">
                       {item.quantity} units from &quot;{item.stage_name}&quot;
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600 break-words">
                       Reason: {item.reason}
                     </p>
                   </div>
@@ -904,6 +909,7 @@ const SingleManufacturingBatchPage = ({
                     variant="warning"
                     size="sm"
                     onClick={() => handleOpenResolveReworkModal(item)}
+                    className="w-full sm:w-auto sm:ml-3 text-sm"
                   >
                     Resolve
                   </Button>
@@ -914,22 +920,23 @@ const SingleManufacturingBatchPage = ({
         )}
 
         {batch.status === "In Progress" && batch.current_stage && (
-          <div className="bg-white p-6 rounded-lg border shadow-sm mt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              <ChevronsRight className="inline-block h-5 w-5 text-blue-600 mr-2" />
-              Current Stage: {batch.current_stage.stage_name}
+          <div className="bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
+              <ChevronsRight className="inline-block h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mr-2" />
+              Current Stage: <span className="break-words">{batch.current_stage.stage_name}</span>
             </h3>
-            <p className="text-sm text-gray-600 mb-4 ml-7">
+            <p className="text-sm text-gray-600 mb-4 ml-6 sm:ml-7">
               Processing Quantity:{" "}
               <span className="font-medium">
                 {batch.current_stage.quantity}
               </span>{" "}
               units
             </p>
-            <div className="flex flex-wrap gap-4 ml-7">
+            <div className="ml-6 sm:ml-7">
               <Button
                 variant="primary"
                 onClick={() => setShowQualityCheckModal(true)}
+                className="w-full sm:w-auto text-sm"
               >
                 <ShieldCheck className="mr-2 h-4 w-4" />
                 Perform Quality Check
@@ -939,28 +946,29 @@ const SingleManufacturingBatchPage = ({
         )}
 
         {batch.status === "On Hold" && (
-          <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200 mt-6">
-            <h3 className="text-lg font-semibold text-yellow-900">
+          <div className="bg-yellow-50 p-4 sm:p-6 rounded-lg border border-yellow-200">
+            <h3 className="text-base sm:text-lg font-semibold text-yellow-900">
               Batch On Hold
             </h3>
-            <p className="text-yellow-800">
+            <p className="text-sm sm:text-base text-yellow-800 mt-1">
               Please resolve all pending rework items to finalize the batch.
             </p>
           </div>
         )}
+
         {batch.status === "Completed" && (
-          <div className="bg-green-50 p-6 rounded-lg border border-green-200 mt-6">
-            <h3 className="text-lg font-semibold text-green-900">
+          <div className="bg-green-50 p-4 sm:p-6 rounded-lg border border-green-200">
+            <h3 className="text-base sm:text-lg font-semibold text-green-900">
               Batch Completed
             </h3>
-            <p className="text-green-800">
+            <p className="text-sm sm:text-base text-green-800 mt-1">
               Final produced count is {batch.quantity_produced}.
             </p>
           </div>
         )}
 
-        <div className="bg-white p-6 rounded-lg border shadow-sm mt-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
+        <div className="bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
             Stage History & Quality Checks
           </h3>
           {(batch.stages_history || []).length > 0 ? (
@@ -969,34 +977,34 @@ const SingleManufacturingBatchPage = ({
                 key={history.stage_id}
                 className="mb-4 border-b pb-4 last:border-b-0 last:pb-0"
               >
-                <h4 className="font-semibold text-lg text-gray-800">
+                <h4 className="font-semibold text-base sm:text-lg text-gray-800 break-words">
                   {history.stage_name}
                 </h4>
                 {history.quality_checks && history.quality_checks.length > 0 ? (
-                  <div className="mt-2 space-y-3 pl-4 border-l-2">
+                  <div className="mt-2 space-y-3 pl-2 sm:pl-4 border-l-2">
                     {history.quality_checks.map((qc) => (
                       <div
                         key={qc._id}
                         className="p-3 bg-gray-50 rounded-md border"
                       >
-                        <p className="text-sm font-medium">
+                        <p className="text-xs sm:text-sm font-medium">
                           QC on {formatDate(qc.check_date)}
                         </p>
-                        <div className="grid grid-cols-3 gap-2 mt-2 text-center">
-                          <div className="bg-green-100 p-1 rounded">
-                            <p className="text-xs text-green-700">Passed</p>
+                        <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-2 text-center">
+                          <div className="bg-green-100 p-1 sm:p-2 rounded text-xs sm:text-sm">
+                            <p className="text-green-700 font-medium">Passed</p>
                             <p className="font-bold text-green-800">
                               {qc.disposition.quantity_passed}
                             </p>
                           </div>
-                          <div className="bg-orange-100 p-1 rounded">
-                            <p className="text-xs text-orange-700">Rework</p>
+                          <div className="bg-orange-100 p-1 sm:p-2 rounded text-xs sm:text-sm">
+                            <p className="text-orange-700 font-medium">Rework</p>
                             <p className="font-bold text-orange-800">
                               {qc.disposition.quantity_for_rework}
                             </p>
                           </div>
-                          <div className="bg-red-100 p-1 rounded">
-                            <p className="text-xs text-red-700">Rejected</p>
+                          <div className="bg-red-100 p-1 sm:p-2 rounded text-xs sm:text-sm">
+                            <p className="text-red-700 font-medium">Rejected</p>
                             <p className="font-bold text-red-800">
                               {qc.disposition.quantity_rejected}
                             </p>
@@ -1004,35 +1012,37 @@ const SingleManufacturingBatchPage = ({
                         </div>
 
                         {qc.samples_data && qc.samples_data.length > 0 && (
-                          <div className="mt-4 overflow-x-auto">
-                            <p className="text-sm font-semibold mb-2">Sample Test Results</p>
-                            <table className="min-w-full text-sm text-left border border-gray-200">
-                              <thead>
-                                <tr className="bg-gray-100">
-                                  <th className="p-2 border-b border-r">Parameter</th>
-                                  <th className="p-2 border-b border-r">Specified Value</th>
-                                  <th className="p-2 border-b border-r">Observed Value</th>
-                                  <th className="p-2 border-b">Result</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {qc.samples_data.map((sample, sampleIndex) => (
-                                  <tr key={sampleIndex} className="odd:bg-white even:bg-gray-50">
-                                    <td className="p-2 border-r">{sample.parameter}</td>
-                                    <td className="p-2 border-r">{sample.specification}</td>
-                                    <td className="p-2 border-r">{sample.observed_value}</td>
-                                    <td className={`p-2 font-medium ${sample.passed ? 'text-green-600' : 'text-red-600'}`}>
-                                      {sample.passed ? 'Pass' : 'Fail'}
-                                    </td>
+                          <div className="mt-4">
+                            <p className="text-xs sm:text-sm font-semibold mb-2">Sample Test Results</p>
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full text-xs sm:text-sm text-left border border-gray-200">
+                                <thead>
+                                  <tr className="bg-gray-100">
+                                    <th className="p-1 sm:p-2 border-b border-r font-medium">Parameter</th>
+                                    <th className="p-1 sm:p-2 border-b border-r font-medium">Spec</th>
+                                    <th className="p-1 sm:p-2 border-b border-r font-medium">Observed</th>
+                                    <th className="p-1 sm:p-2 border-b font-medium">Result</th>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                </thead>
+                                <tbody>
+                                  {qc.samples_data.map((sample, sampleIndex) => (
+                                    <tr key={sampleIndex} className="odd:bg-white even:bg-gray-50">
+                                      <td className="p-1 sm:p-2 border-r break-words">{sample.parameter}</td>
+                                      <td className="p-1 sm:p-2 border-r break-words">{sample.specification}</td>
+                                      <td className="p-1 sm:p-2 border-r break-words">{sample.observed_value}</td>
+                                      <td className={`p-1 sm:p-2 font-medium ${sample.passed ? 'text-green-600' : 'text-red-600'}`}>
+                                        {sample.passed ? 'Pass' : 'Fail'}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
                         )}
 
                         {qc.notes && (
-                          <p className="text-xs text-gray-600 mt-2">
+                          <p className="text-xs text-gray-600 mt-2 break-words">
                             <b>Notes:</b> {qc.notes}
                           </p>
                         )}
@@ -1040,14 +1050,14 @@ const SingleManufacturingBatchPage = ({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 pl-4">
+                  <p className="text-xs sm:text-sm text-gray-500 pl-2 sm:pl-4">
                     No quality checks performed.
                   </p>
                 )}
               </div>
             ))
           ) : (
-            <p className="text-gray-500">No stage history recorded yet.</p>
+            <p className="text-sm text-gray-500">No stage history recorded yet.</p>
           )}
         </div>
       </div>

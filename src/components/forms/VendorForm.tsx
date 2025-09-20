@@ -161,7 +161,8 @@ const VendorForm: React.FC<VendorFormProps> = ({
           }
         }
       } catch (error) {
-        console.error("Error fetching categories:", error);
+          // Log error but don't break the component
+          console.error("Error fetching categories:", error);
       }
     };
     fetchCategories();
@@ -391,21 +392,21 @@ const VendorForm: React.FC<VendorFormProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">{title}</h1>
+    <div className="max-w-full sm:max-w-6xl mx-auto p-4 sm:p-6 bg-white">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 sm:mb-8">{title}</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-8">
         {/* Company Information */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">
             Company Information
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label
                 htmlFor="approved_for"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2"
               >
                 Approved For <span className="text-red-500">*</span>
               </label>
@@ -413,7 +414,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                 id="approved_for"
                 value={formData.approved_for}
                 onChange={(e) => updateFormData("approved_for", e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.approved_for ? "border-red-500" : "border-gray-300"
                 }`}
                 required
@@ -426,7 +427,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                 ))}
               </select>
               {errors.approved_for && (
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-xs sm:text-sm text-red-600">
                   {errors.approved_for}
                 </p>
               )}
@@ -447,7 +448,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                 Company Address <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -456,7 +457,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                   updateFormData("company_address", e.target.value)
                 }
                 placeholder="Enter complete company address"
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.company_address ? "border-red-500" : "border-gray-300"
                 }`}
                 rows={3}
@@ -464,20 +465,20 @@ const VendorForm: React.FC<VendorFormProps> = ({
                 id="company_address"
               />
               {errors.company_address && (
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-xs sm:text-sm text-red-600">
                   {errors.company_address}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                 State <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.state}
                 onChange={(e) => updateFormData("state", e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.state ? "border-red-500" : "border-gray-300"
                 }`}
                 required
@@ -491,7 +492,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                 ))}
               </select>
               {errors.state && (
-                <p className="mt-1 text-sm text-red-600">{errors.state}</p>
+                <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.state}</p>
               )}
             </div>
 
@@ -556,14 +557,14 @@ const VendorForm: React.FC<VendorFormProps> = ({
             />
           </div>
 
-          <div className="mt-6">
+          <div className="mt-4 sm:mt-6">
             <label
-              className="block text-sm font-medium text-gray-700 mb-4"
+              className="block text-sm font-medium text-gray-700 mb-2"
               id="company_type"
             >
               Company Type <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
               {(
                 [
                   "Proprietorship",
@@ -572,7 +573,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
                   "Limited",
                 ] as const
               ).map((type) => (
-                <label key={type} className="flex items-center">
+                <label key={type} className="flex items-center text-sm">
                   <input
                     type="radio"
                     name="company_type"
@@ -581,18 +582,18 @@ const VendorForm: React.FC<VendorFormProps> = ({
                     onChange={(e) =>
                       updateFormData("company_type", e.target.value)
                     }
-                    className="mr-2 text-blue-600 focus:ring-blue-500"
+                    className="mr-2 text-blue-600 focus:ring-blue-500 h-4 w-4"
                   />
-                  <span className="text-sm text-gray-700">{type}</span>
+                  <span className="text-gray-700">{type}</span>
                 </label>
               ))}
             </div>
             {errors.company_type && (
-              <p className="mt-1 text-sm text-red-600">{errors.company_type}</p>
+              <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.company_type}</p>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">
             <InputField
               label="Name of Partner/Directors"
               value={formData.partner_name}
@@ -627,12 +628,12 @@ const VendorForm: React.FC<VendorFormProps> = ({
         </div>
 
         {/* Banking Details */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">
             Banking Details
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <InputField
               label="Bank Name"
               value={formData.bank_name}
@@ -697,12 +698,12 @@ const VendorForm: React.FC<VendorFormProps> = ({
         </div>
 
         {/* GST Registration Details */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">
             GST Registration Details
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <InputField
               label="GST NUMBER"
               value={formData.gst_no}
@@ -730,35 +731,37 @@ const VendorForm: React.FC<VendorFormProps> = ({
             />
           </div>
 
-          <div className="mt-6">
-            <div className="flex items-center space-x-6">
+          <div className="mt-4 sm:mt-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-6">
               <span className="text-sm font-medium text-gray-700">
                 ARE YOU AN MSME UNIT?
               </span>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="is_msme"
-                  checked={formData.is_msme === true}
-                  onChange={() => updateFormData("is_msme", true)}
-                  className="mr-2 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">Yes</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="is_msme"
-                  checked={formData.is_msme === false}
-                  onChange={() => updateFormData("is_msme", false)}
-                  className="mr-2 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">NO</span>
-              </label>
+              <div className="flex space-x-4">
+                <label className="flex items-center text-sm">
+                  <input
+                    type="radio"
+                    name="is_msme"
+                    checked={formData.is_msme === true}
+                    onChange={() => updateFormData("is_msme", true)}
+                    className="mr-2 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                  />
+                  <span className="text-gray-700">Yes</span>
+                </label>
+                <label className="flex items-center text-sm">
+                  <input
+                    type="radio"
+                    name="is_msme"
+                    checked={formData.is_msme === false}
+                    onChange={() => updateFormData("is_msme", false)}
+                    className="mr-2 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                  />
+                  <span className="text-gray-700">NO</span>
+                </label>
+              </div>
             </div>
 
             {formData.is_msme && (
-              <div className="mt-4 max-w-md">
+              <div className="mt-4 max-w-sm">
                 <label
                   className="block text-sm font-medium text-gray-700 mb-2"
                   id="reg_document_id"
@@ -771,20 +774,20 @@ const VendorForm: React.FC<VendorFormProps> = ({
                     type="button"
                     variant="secondary"
                     onClick={() => setIsMsmeUploadModalOpen(true)}
-                    className="px-4 py-2"
+                    className="px-3 py-2 text-sm"
                   >
                     {formData.reg_document_id
                       ? "Change Document"
                       : "Upload Document"}
                   </Button>
                   {formData.reg_document_id && (
-                    <span className="text-sm text-green-600 flex items-center gap-1">
-                      <CheckCircle className="h-4 w-4" /> Document Uploaded!
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" /> Document Uploaded!
                     </span>
                   )}
                 </div>
                 {errors.reg_document_id && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="mt-1 text-xs sm:text-sm text-red-600">
                     {errors.reg_document_id}
                   </p>
                 )}
@@ -794,16 +797,16 @@ const VendorForm: React.FC<VendorFormProps> = ({
         </div>
 
         {/* Documents Section */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
               Additional Documents
             </h2>
             <Button
               type="button"
               variant="primary"
               onClick={() => setIsDocumentUploadModalOpen(true)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
             >
               <Upload className="h-4 w-4" />
               Upload Document
@@ -812,13 +815,13 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
           {formData.documents.length === 0 ? (
             <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
-              <FileText className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-              <p className="text-gray-600 mb-3">No documents uploaded</p>
+              <FileText className="mx-auto h-6 w-6 sm:h-8 sm:w-8 text-gray-400 mb-2" />
+              <p className="text-gray-600 mb-3 text-sm">No documents uploaded</p>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => setIsDocumentUploadModalOpen(true)}
-                className="flex items-center gap-2 mx-auto"
+                className="flex items-center gap-2 mx-auto text-sm"
               >
                 <Upload className="h-4 w-4" />
                 Upload Document
@@ -829,16 +832,16 @@ const VendorForm: React.FC<VendorFormProps> = ({
               {formData.documents.map((doc, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-white border rounded-lg"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white border rounded-lg"
                 >
-                  <div className="flex items-center space-x-3">
-                    <FileText className="h-5 w-5 text-blue-500" />
+                  <div className="flex items-center space-x-3 mb-2 sm:mb-0">
+                    <FileText className="h-5 w-5 text-blue-500 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-gray-900 truncate max-w-[200px] sm:max-w-none">
                         {doc.name}
                       </p>
                       {doc.fileName && (
-                        <p className="text-xs text-gray-500">{doc.fileName}</p>
+                        <p className="text-xs text-gray-500 truncate max-w-[200px] sm:max-w-none">{doc.fileName}</p>
                       )}
                     </div>
                   </div>
@@ -860,12 +863,12 @@ const VendorForm: React.FC<VendorFormProps> = ({
           )}
         </div>
 
-        <div className="flex justify-end pt-6">
+        <div className="flex justify-center sm:justify-end pt-4 sm:pt-6">
           <Button
             type="submit"
             variant="primary"
             disabled={isLoading}
-            className="min-w-32"
+            className="w-full sm:w-auto min-w-32"
           >
             {isLoading ? "Saving..." : submitButtonText}
           </Button>

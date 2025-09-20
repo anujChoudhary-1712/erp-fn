@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   MoreHorizontal,
 //   Bell,
-  ChevronLeft
+  ChevronLeft,
+  LogOut,
 } from 'lucide-react';
 
 interface NavItem {
@@ -27,13 +28,15 @@ interface MobileNavProps {
   moreMenuItems: NavItem[];
   currentPath?: string;
   className?: string;
+  onLogout: () => void;
 }
 
 const MobileNavigation: React.FC<MobileNavProps> = ({ 
   mainTabItems,
   moreMenuItems,
   currentPath = '/', 
-  className = '' 
+  className = '',
+  onLogout,
 }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showSubMenu, setShowSubMenu] = useState<string | null>(null);
@@ -48,7 +51,10 @@ const MobileNavigation: React.FC<MobileNavProps> = ({
   };
 
   const handleMoreItemClick = (item: NavItem) => {
-    if (item.children && item.children.length > 0) {
+    if (item.id === 'logout') {
+      onLogout(); // Call the logout function
+      setShowMoreMenu(false);
+    } else if (item.children && item.children.length > 0) {
       setShowSubMenu(item.id);
     } else {
       window.location.href = item.href;
