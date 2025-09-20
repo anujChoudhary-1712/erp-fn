@@ -3,7 +3,23 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { getCookie, removeCookie, setCookie } from "./CookieUtils";
 
-export const APIBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api";
+let backendHost;
+
+if (typeof window !== 'undefined') {
+  // Client-side environment
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    backendHost = 'http://localhost:8001';
+  } else {
+    // This assumes the backend is on the same IP as the frontend, just on a different port.
+    backendHost = `http://${window.location.hostname}:8001`;
+  }
+} else {
+  // Server-side environment (e.g., Next.js server-side rendering)
+  // You might want to use the environment variable here.
+  backendHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+}
+
+export const APIBaseUrl = `${backendHost}/api`;
 
 // Create a custom axios instance
 const axiosInstance = axios.create({

@@ -15,11 +15,8 @@ import {
   Users,
   Factory,
   CheckCircle,
-  Truck,
-  RotateCcw,
   FileText,
   Home,
-  Settings,
   MoreHorizontal,
   User,
   Wrench,
@@ -44,11 +41,11 @@ const allNavigationItems = [
     requiredRoles: ["orders", "admin"],
   },
   {
-    id: "store",
-    label: "Store",
+    id: "inventory",
+    label: "Inventory",
     icon: <Package size={20} />,
     href: "/dashboard/inventory",
-    requiredRoles: ["store_finished_goods", "store_raw_materials", "admin"],
+    requiredRoles: ["store_finished_goods", "store_raw_materials", "store_general", "machinery", "admin"],
     children: [
       {
         id: "finished-goods",
@@ -63,6 +60,20 @@ const allNavigationItems = [
         icon: <Package size={16} />,
         href: "/dashboard/inventory/materials",
         requiredRoles: ["store_raw_materials", "admin"],
+      },
+      {
+        id: "general",
+        label: "General",
+        icon: <Package size={16} />,
+        href: "/dashboard/inventory/general",
+        requiredRoles: ["store_general", "admin"],
+      },
+      {
+        id: "machinery",
+        label: "Machinery",
+        icon: <Wrench size={16} />,
+        href: "/dashboard/inventory/machinery",
+        requiredRoles: ["machinery", "admin"],
       },
     ],
   },
@@ -103,13 +114,6 @@ const allNavigationItems = [
       },
     ],
   },
-  // {
-  //   id: 'dispatch',
-  //   label: 'Dispatch',
-  //   icon: <Truck size={20} />,
-  //   href: '/dashboard/dispatch',
-  //   requiredRoles: ["dispatch", "admin"],
-  // },
   {
     id: "documents",
     label: "Documents",
@@ -117,13 +121,7 @@ const allNavigationItems = [
     href: "/dashboard/documents",
     requiredRoles: ["documents", "admin"],
   },
-  {
-    id: "machinery",
-    label: "Machinery",
-    icon: <Wrench size={20} />,
-    href: "/dashboard/machinery",
-    requiredRoles: ["machinery", "admin"],
-  },
+  // Removed old 'machinery' top-level item since it's now a child of 'inventory'
   {
     id: "report-n-complaint",
     label: "Report & Complaint",
@@ -189,7 +187,7 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
   const [successMessage, setSuccessMessage] = useState<string>("");
 
   const router = useRouter();
-  const { decodeAndSetUser, user } = useUser(); // Access user from context
+  const { decodeAndSetUser } = useUser();
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -198,7 +196,6 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
       [name]: value,
     }));
 
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -206,7 +203,6 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
       }));
     }
 
-    // Clear API error when user starts typing
     if (apiError) {
       setApiError("");
     }
@@ -215,14 +211,12 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
   const validateForm = (): boolean => {
     const newErrors: Errors = {};
 
-    // Email validation
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
-    // Password validation
     if (!formData.password.trim()) {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
@@ -236,23 +230,19 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
   const handleApiError = (error: ApiError) => {
     console.error("Login failed:", error);
 
-    // Handle different types of API errors
     if (error.response?.data) {
       const { data } = error.response;
 
-      // Handle field-specific errors
       if (data.errors) {
         setErrors(data.errors);
         return;
       }
 
-      // Handle general API error messages
       if (data.error) {
         setApiError(data.error);
         return;
       }
     }
-    // Handle HTTP status codes
     if (error.response?.status) {
       switch (error.response.status) {
         case 400:
@@ -286,54 +276,65 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
       return;
     }
 
-    // Handle network errors
     if (error.message?.includes("Network")) {
       setApiError("Network error. Please check your internet connection.");
       return;
     }
 
-    // Handle timeout errors
     if (error.message?.includes("timeout")) {
       setApiError("Request timeout. Please try again.");
       return;
     }
 
-    // Generic error fallback
     setApiError("Login failed. Please try again.");
   };
 
   const getRedirectPathBasedOnRole = (roles: string[]): string => {
-    // If the user is an admin, always go to the main dashboard
     if (roles.includes("admin")) {
       return "/dashboard";
     }
 
-    // Otherwise, find the page for their first role
-    const firstRole = roles[0];
-    console.log("User roles:", roles);
-    if (!firstRole) return "/dashboard";
-
-    // Flatten the navigation items to search for the correct path
     const allNavItems = allNavigationItems.flatMap((item) => [
       item,
       ...(item.children || []),
     ]);
 
-    const matchedItem = allNavItems.find((item) =>
-      item.requiredRoles.includes(firstRole)
-    );
+    // Priority order for redirection
+    const priorityRoles = [
+      "dashboard",
+      "orders",
+      "store_finished_goods",
+      "store_raw_materials",
+      "store_general",
+      "machinery",
+      "purchase_request",
+      "vendors",
+      "production_plans",
+      "production_batch_mgt",
+      "documents",
+      "reports",
+      "personnel_team",
+      "personnel_training",
+    ];
 
-    return matchedItem?.href || "/dashboard"; // Fallback to dashboard
+    for (const role of priorityRoles) {
+      const matchedItem = allNavItems.find((item) =>
+        item.requiredRoles.includes(role)
+      );
+      if (matchedItem) {
+        return matchedItem.href;
+      }
+    }
+
+    return "/dashboard"; // Fallback to dashboard
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // Clear previous messages
     setApiError("");
     setSuccessMessage("");
 
-    // Validate form
     if (!validateForm()) {
       return;
     }
@@ -348,12 +349,8 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
       });
 
       if (res.status === 200) {
-        console.log("Login successful:", res.data);
-
-        // Show success message
         setSuccessMessage("Login successful! Redirecting...");
 
-        // Set authentication cookie
         try {
           setCookie("token", res.data.token, {
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -367,11 +364,8 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
           return;
         }
 
-        // Decode and set user
         const decodedToken: any = decodeAndSetUser(res.data.token);
-        console.log("Decoded user:", decodedToken);
 
-        // Redirect based on user type and roles
         try {
           if (userType === "organization") {
             const redirectToPath = getRedirectPathBasedOnRole(
@@ -390,14 +384,13 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
       } else {
         if (res.status === 401) {
           setApiError("Invalid email or password. Please try again.");
-        } else if (res.status === 403){
+        } else if (res.status === 403) {
           setApiError("Access denied. Your account may be deactivated.");
-        }else {
+        } else {
           setApiError("Unexpected response from server. Please try again.");
         }
       }
     } catch (error) {
-      console.log("Login error:", error);
       handleApiError(error as ApiError);
     } finally {
       setLoading(false);
@@ -414,7 +407,6 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
       <div className="bg-white p-6 rounded-lg shadow-md min-w-[300px] w-10/12 max-w-[500px]">
         <h2 className="text-xl font-semibold mb-6 text-center">Login</h2>
 
-        {/* Success Message */}
         {successMessage && (
           <div className="mb-4 p-4 rounded-md bg-green-50 border border-green-200 flex items-start">
             <CheckCircle className="h-5 w-5 text-green-400 mr-3 mt-0.5 flex-shrink-0" />
@@ -431,7 +423,6 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
           </div>
         )}
 
-        {/* API Error Message */}
         {apiError && (
           <div className="mb-4 p-4 rounded-md bg-red-50 border border-red-200 flex items-start">
             <AlertCircle className="h-5 w-5 text-red-400 mr-3 mt-0.5 flex-shrink-0" />

@@ -61,13 +61,15 @@ const AddTeamMemberModal: React.FC<AddTeamMemberModalProps> = ({
     { value: "orders", label: "Orders" },
     { value: "store_finished_goods", label: "Store: Finished Goods" },
     { value: "store_raw_materials", label: "Store: Raw Materials" },
+    { value: "store_general", label: "Store: General" }, // New Role
+    { value: "store_machinery", label: "Store: Machinery" }, // New Role
     // { value: "purchase_request", label: "Purchase Request" },
     { value: "vendors", label: "Vendors" },
     { value: "production_plans", label: "Production: Plans" },
     { value: "production_batch_mgt", label: "Production: Batch Management" },
     // { value: "dispatch", label: "Dispatch" },
     { value: "documents", label: "Documents" },
-    { value: "machinery", label: "Machinery" },
+    // Removed old machinery role
     { value: "reports", label: "Reports & Complaints" },
     { value: "personnel_team", label: "Personnel: Team" },
     { value: "personnel_training", label: "Personnel: Training" },

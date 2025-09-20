@@ -26,26 +26,39 @@ function getRedirectPathForRoles(roles: string | string[]) {
   // Priority order for redirects based on roles (similar to CustomersLayout logic)
   const roleRedirectMap = {
     dashboard: "/dashboard",
-    orders: "/dashboard/orders", 
+    orders: "/dashboard/orders",
     store_finished_goods: "/dashboard/inventory/finished-goods",
     store_raw_materials: "/dashboard/inventory/materials",
+    store_general: "/dashboard/inventory/general", // New
+    machinery: "/dashboard/inventory/machinery", // New
     purchase_request: "/dashboard/purchases",
     vendors: "/dashboard/vendors",
     production_plans: "/dashboard/planning",
     production_batch_mgt: "/dashboard/production",
     documents: "/dashboard/documents",
-    machinery: "/dashboard/machinery",
     reports: "/dashboard/report",
     personnel_team: "/dashboard/personnel/team",
     personnel_training: "/dashboard/personnel/training-plan",
     admin: "/dashboard", // Admin can access dashboard
   };
 
-  // Check roles in priority order
+  // Check roles in a specific priority order. More specific routes come first.
   const priorityRoles = [
-    "dashboard", "admin", "orders", "store_finished_goods", "store_raw_materials",
-    "purchase_request", "vendors", "production_plans", "production_batch_mgt",
-    "documents", "machinery", "reports", "personnel_team", "personnel_training"
+    "admin",
+    "dashboard",
+    "orders",
+    "store_finished_goods",
+    "store_raw_materials",
+    "store_general",
+    "machinery",
+    "purchase_request",
+    "vendors",
+    "production_plans",
+    "production_batch_mgt",
+    "documents",
+    "reports",
+    "personnel_team",
+    "personnel_training",
   ];
 
   for (const role of priorityRoles as Array<keyof typeof roleRedirectMap>) {
@@ -60,12 +73,12 @@ function getRedirectPathForRoles(roles: string | string[]) {
 
 export function middleware(req: { nextUrl: { pathname: any; }; cookies: { get: (arg0: string) => { (): any; new(): any; value: any; }; }; url: string | URL | undefined; }) {
   const { pathname } = req.nextUrl;
-  const token = req.cookies.get("token")?.value; // Changed from "auth-token" to "token"
+  const token = req.cookies.get("token")?.value;
 
   // Skip internal paths, API routes, and static assets
   if (
-    pathname.startsWith("/_next") || 
-    pathname.startsWith("/api") || 
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
     pathname.startsWith("/favicon") ||
     pathname.includes(".")
   ) {
@@ -75,30 +88,25 @@ export function middleware(req: { nextUrl: { pathname: any; }; cookies: { get: (
   // Handle internal login paths
   if (pathname === "/internal/login") {
     if (token) {
-      // If user has token and tries to access internal login, redirect to organizations
       return NextResponse.redirect(new URL("/internal/organizations", req.url));
     }
-    // Allow access to internal login if no token
     return NextResponse.next();
   }
 
   // Handle internal organizations path
   if (pathname.startsWith("/internal/organizations")) {
     if (!token) {
-      // If no token and trying to access internal organizations, redirect to internal login
       return NextResponse.redirect(new URL("/internal/login", req.url));
     }
-    // Allow access if token exists
     return NextResponse.next();
   }
 
-        const decoded = decodeToken(token) as CustomJwtPayload;
   if (pathname === "/") {
     if (token) {
       try {
         // Decode token to get user roles
-        const decoded:any = decodeToken(token);
-        
+        const decoded: any = decodeToken(token);
+
         if (decoded && decoded.roles) {
           // Redirect based on user roles
           const redirectPath = getRedirectPathForRoles(decoded.roles);
@@ -109,38 +117,31 @@ export function middleware(req: { nextUrl: { pathname: any; }; cookies: { get: (
         }
       } catch (error) {
         console.error("Error decoding token:", error);
-        // If token is invalid, allow access to root (will show login)
         return NextResponse.next();
       }
     }
-    // No token, allow access to root (will show login)
     return NextResponse.next();
   }
 
   // Handle dashboard and protected paths
   if (pathname.startsWith("/dashboard")) {
     if (!token) {
-      // No token, redirect to root for login
       return NextResponse.redirect(new URL("/", req.url));
     }
-    
+
     try {
       // Verify token is valid
       const decoded = decodeToken(token);
       if (!decoded) {
-        // Invalid token, redirect to root for login
         return NextResponse.redirect(new URL("/", req.url));
       }
     } catch (error) {
-      // Token verification failed, redirect to root
       return NextResponse.redirect(new URL("/", req.url));
     }
-    
-    // Token is valid, allow access (CustomersLayout will handle role-based access)
+
     return NextResponse.next();
   }
 
-  // For all other paths, continue normally
   return NextResponse.next();
 }
 

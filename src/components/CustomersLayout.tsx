@@ -39,12 +39,12 @@ const allNavigationItems = [
     href: "/dashboard/orders",
     requiredRoles: ["orders", "admin"],
   },
-  {
-    id: "store",
-    label: "Store",
+ {
+    id: "inventory",
+    label: "Inventory",
     icon: <Package size={20} />,
     href: "/dashboard/inventory",
-    requiredRoles: ["store_finished_goods", "store_raw_materials", "admin"],
+    requiredRoles: ["store_finished_goods", "store_raw_materials", "store_general", "machinery", "admin"],
     children: [
       {
         id: "finished-goods",
@@ -59,6 +59,20 @@ const allNavigationItems = [
         icon: <Package size={16} />,
         href: "/dashboard/inventory/materials",
         requiredRoles: ["store_raw_materials", "admin"],
+      },
+      {
+        id: "general",
+        label: "General",
+        icon: <Package size={16} />,
+        href: "/dashboard/inventory/general",
+        requiredRoles: ["store_general", "admin"],
+      },
+      {
+        id: "machinery",
+        label: "Machinery",
+        icon: <Wrench size={16} />,
+        href: "/dashboard/inventory/machinery",
+        requiredRoles: ["machinery", "admin"],
       },
     ],
   },
@@ -105,13 +119,6 @@ const allNavigationItems = [
     icon: <FileText size={20} />,
     href: "/dashboard/documents",
     requiredRoles: ["documents", "admin"],
-  },
-  {
-    id: "machinery",
-    label: "Machinery",
-    icon: <Wrench size={20} />,
-    href: "/dashboard/machinery",
-    requiredRoles: ["machinery", "admin"],
   },
   {
     id: "report-n-complaint",
