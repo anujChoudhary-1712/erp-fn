@@ -16,35 +16,46 @@ const PURCHASE_TYPES = {
 };
 
 interface MachineryFormData {
-  standard_type: string;
-  discipline: string;
-  group: string;
-  device_type: string;
-  name: string;
-  lab_id: string;
-  sr_no: string;
+  // General Information
+  machine_equipment_name: string;
+  machine_equipment_type: string;
   make: string;
   model: string;
-  procurement: string;
-  commissioning: string;
-  instruction_manual: string;
+  serial_number: string;
   location: string;
-  tolerance_sign: string;
-  acceptance_criteria: string;
-  acceptance_criteria_unit_type: string;
-  verification_conformity: string;
-  certificate_no: string;
-  calibration_agency: string;
+  
+  // Technical Details
+  has_technical_details: boolean;
+  range: string;
+  resolution: string;
+  accuracy: string;
+  capacity: string;
+  accessories: string;
+  
+  // Date & Documentation
+  date_of_purchase: string;
+  name_of_vendor: string;
+  date_of_installation: string;
+  warranty_period: string;
+  date_of_operation: string;
+  has_user_manual: boolean;
+  
+  // Calibration Details
+  has_calibration_details: boolean;
+  calibration_lab_name: string;
   calibration_date: string;
+  next_due: string;
   calibration_frequency: string;
-  valid_upto: string;
-  ulr_no: string;
-  coverage_factor: string;
-  master_error: string;
-  error_unit: string;
-  drift_in_standard: string;
-  plan_type: string;
+  
+  // Machine Maintenance Details
+  has_maintenance_details: boolean;
+  maintenance_type: string;
   maintenance_frequency: string;
+  last_maintenance_performed: string;
+  maintenance_service_provider: string;
+  next_scheduled_maintenance_date: string;
+  maintenance_remarks: string;
+  
   documents: { document: string; name: string }[];
 }
 
@@ -228,62 +239,65 @@ const CreatePurchaseForm: React.FC<CreatePurchaseFormProps> = ({
   };
 
   const handleMachinerySubmit = async (machineryData: MachineryFormData) => {
-    setLoading(true);
-    setError("");
+  setLoading(true);
+  setError("");
 
-    try {
-      const machineryResponse = await MachineryApis.createMachinery({
-        ...machineryData,
-        org_id: user?.organizationId || "",
-      });
+  try {
+    // Create machinery with new field structure
+    const machineryResponse = await MachineryApis.createMachinery({
+      ...machineryData,
+      org_id: user?.organizationId || "",
+    });
 
-      if (
-        machineryResponse.status !== 200 &&
-        machineryResponse.status !== 201
-      ) {
-        throw new Error(
-          machineryResponse.data?.message || "Failed to create machinery record"
-        );
-      }
-
-      const machineryId = machineryResponse.data.machinery._id;
-
-      if (!machineryId) {
-        throw new Error("No machinery ID returned from server");
-      }
-
-      const purchaseData = {
-        purchaseRequestType: PURCHASE_TYPES.MACHINERY,
-        machineryId,
-        org_id: user?.organizationId || "",
-      };
-
-      const purchaseResponse = await PurchaseReqApis.createPurchaseRequirement(
-        purchaseData
+    if (
+      machineryResponse.status !== 200 &&
+      machineryResponse.status !== 201
+    ) {
+      throw new Error(
+        machineryResponse.data?.message || "Failed to create machinery record"
       );
-
-      if (purchaseResponse.status === 200 || purchaseResponse.status === 201) {
-        setSuccess("Machinery purchase requirement created successfully!");
-        setTimeout(() => {
-          router.push("/dashboard/purchases");
-        }, 2000);
-      } else {
-        throw new Error(
-          purchaseResponse.data?.message ||
-            "Failed to create machinery purchase requirement"
-        );
-      }
-    } catch (error: any) {
-      console.error("Error creating machinery purchase:", error);
-      setError(
-        error.response?.data?.message ||
-          error.message ||
-          "An error occurred while creating the machinery purchase. Please try again."
-      );
-    } finally {
-      setLoading(false);
     }
-  };
+
+    const machineryId = machineryResponse.data.machinery._id;
+
+    if (!machineryId) {
+      throw new Error("No machinery ID returned from server");
+    }
+
+    // Create purchase requirement
+    const purchaseData = {
+      purchaseRequestType: PURCHASE_TYPES.MACHINERY,
+      machineryId,
+      org_id: user?.organizationId || "",
+    };
+
+    const purchaseResponse = await PurchaseReqApis.createPurchaseRequirement(
+      purchaseData
+    );
+
+    if (purchaseResponse.status === 200 || purchaseResponse.status === 201) {
+      setSuccess("Machinery purchase requirement created successfully!");
+      setTimeout(() => {
+        router.push("/dashboard/purchases");
+      }, 2000);
+    } else {
+      throw new Error(
+        purchaseResponse.data?.message ||
+          "Failed to create machinery purchase requirement"
+      );
+    }
+  } catch (error: any) {
+    console.error("Error creating machinery purchase:", error);
+    setError(
+      error.response?.data?.message ||
+        error.message ||
+        "An error occurred while creating the machinery purchase. Please try again."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   if (showTypeSelection) {
     return (

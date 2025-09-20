@@ -763,51 +763,54 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900">{purchase.machineryId.name}</h3>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                          {purchase.machineryId.standard_type}
-                        </span>
-                        <span className="inline-block px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                          {purchase.machineryId.discipline}
-                        </span>
-                        <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                          {purchase.machineryId.group}
-                        </span>
-                      </div>
+                      {purchase.machineryId.device_type && (
+                        <p className="text-sm text-gray-600 mt-1">Type: {purchase.machineryId.device_type}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Lab ID
-                      </label>
-                      <p className="text-gray-900 font-medium">{purchase.machineryId.lab_id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Serial Number
-                      </label>
-                      <p className="text-gray-900 font-medium">{purchase.machineryId.sr_no}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Make
-                      </label>
-                      <p className="text-gray-900 font-medium">{purchase.machineryId.make}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Model
-                      </label>
-                      <p className="text-gray-900 font-medium">{purchase.machineryId.model}</p>
-                    </div>
+                    {purchase.machineryId.make && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Make
+                        </label>
+                        <p className="text-gray-900 font-medium">{purchase.machineryId.make}</p>
+                      </div>
+                    )}
+                    
+                    {purchase.machineryId.model && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Model
+                        </label>
+                        <p className="text-gray-900 font-medium">{purchase.machineryId.model}</p>
+                      </div>
+                    )}
+                    
+                    {purchase.machineryId.sr_no && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Serial Number
+                        </label>
+                        <p className="text-gray-900 font-medium">{purchase.machineryId.sr_no}</p>
+                      </div>
+                    )}
+                    
+                    {purchase.machineryId.location && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Location
+                        </label>
+                        <p className="text-gray-900 font-medium">{purchase.machineryId.location}</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex justify-end mt-4">
                     <Button 
                       variant="primary" 
-                      onClick={() => purchase.machineryId && router.push(`/dashboard/machinery/${purchase.machineryId._id}`)}
+                      onClick={() => purchase.machineryId && router.push(`/dashboard/inventory/machinery/${purchase.machineryId.lab_id}`)}
                       className="text-sm"
                     >
                       View All Details
@@ -816,6 +819,7 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
                 </div>
               </div>
             )}
+
 
             {/* Misc Purchase Type */}
             {purchase.purchaseRequestType === "Misc" && purchase.misc_id && (

@@ -45,7 +45,7 @@ const MachineryPage = () => {
     },[])
 
     const navigateToSingleMachinery = (id: string) => {
-        router.push(`/dashboard/machinery/${id}`);
+        router.push(`/dashboard/inventory/machinery/${id}`);
     }
 
     const MachineryCard = ({ machinery }: { machinery: Machinery }) => (

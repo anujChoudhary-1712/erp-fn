@@ -15,9 +15,15 @@ interface DocumentUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUploadSuccess: (documentId: string, documentName: string) => void;
+  documentType: string;
 }
 
-const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClose, onUploadSuccess }) => {
+const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onUploadSuccess,
+  documentType 
+}) => {
   const [docName, setDocName] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -36,7 +42,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
     formData.append("file", file);
     formData.append("description", docName);
     formData.append("docName", docName);
-    formData.append("docType", "Machinery Document");
+    formData.append("docType", documentType);
 
     try {
       const token = getCookie("token");
@@ -72,7 +78,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold">Upload Document</h3>
+          <h3 className="text-xl font-semibold">Upload {documentType}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
@@ -85,7 +91,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
             type="text"
             value={docName}
             onChange={(e) => setDocName(e.target.value)}
-            placeholder="e.g., Manual, Certificate"
+            placeholder={`e.g., ${documentType}`}
           />
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Select File</label>
@@ -115,35 +121,46 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
 
 // TypeScript interfaces for form data
 interface MachineryFormData {
-  standard_type: string;
-  discipline: string;
-  group: string;
-  device_type: string;
-  name: string;
-  lab_id: string;
-  sr_no: string;
+  // General Information
+  machine_equipment_name: string;
+  machine_equipment_type: string;
   make: string;
   model: string;
-  procurement: string;
-  commissioning: string;
-  instruction_manual: string;
+  serial_number: string;
   location: string;
-  tolerance_sign: string;
-  acceptance_criteria: string;
-  acceptance_criteria_unit_type: string;
-  verification_conformity: string;
-  certificate_no: string;
-  calibration_agency: string;
+  
+  // Technical Details
+  has_technical_details: boolean;
+  range: string;
+  resolution: string;
+  accuracy: string;
+  capacity: string;
+  accessories: string;
+  
+  // Date & Documentation
+  date_of_purchase: string;
+  name_of_vendor: string;
+  date_of_installation: string;
+  warranty_period: string;
+  date_of_operation: string;
+  has_user_manual: boolean;
+  
+  // Calibration Details
+  has_calibration_details: boolean;
+  calibration_lab_name: string;
   calibration_date: string;
+  next_due: string;
   calibration_frequency: string;
-  valid_upto: string;
-  ulr_no: string;
-  coverage_factor: string;
-  master_error: string;
-  error_unit: string;
-  drift_in_standard: string;
-  plan_type: string;
+  
+  // Machine Maintenance Details
+  has_maintenance_details: boolean;
+  maintenance_type: string;
   maintenance_frequency: string;
+  last_maintenance_performed: string;
+  maintenance_service_provider: string;
+  next_scheduled_maintenance_date: string;
+  maintenance_remarks: string;
+  
   documents: Evidence[];
 }
 
@@ -152,50 +169,61 @@ interface MachineryFormProps {
   loading?: boolean;
 }
 
-const FREQUENCY_OPTIONS = ["1", "3", "6", "12", "24"];
-const ERROR_UNIT_OPTIONS = ["mm", "cm", "m", "kg", "g", "°C"];
-const ACCEPTANCE_CRITERIA_UNIT_OPTIONS = ["mm", "cm", "m", "kg", "g", "°C"];
+const MAINTENANCE_TYPE_OPTIONS = ["Internal", "External"];
+const CALIBRATION_FREQUENCY_OPTIONS = ["1", "3", "6", "12", "24"];
+const MAINTENANCE_FREQUENCY_OPTIONS = ["1", "3", "6", "12", "24"];
 
 const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false }) => {
   const [formData, setFormData] = useState<MachineryFormData>({
-    standard_type: "Primary",
-    discipline: "",
-    group: "",
-    device_type: "",
-    name: "",
-    lab_id: "",
-    sr_no: "",
+    // General Information
+    machine_equipment_name: "",
+    machine_equipment_type: "",
     make: "",
     model: "",
-    procurement: "",
-    commissioning: "",
-    instruction_manual: "Yes",
+    serial_number: "",
     location: "",
-    tolerance_sign: "+",
-    acceptance_criteria: "",
-    acceptance_criteria_unit_type: "",
-    verification_conformity: "Yes",
-    certificate_no: "",
-    calibration_agency: "",
+    
+    // Technical Details
+    has_technical_details: false,
+    range: "",
+    resolution: "",
+    accuracy: "",
+    capacity: "",
+    accessories: "",
+    
+    // Date & Documentation
+    date_of_purchase: "",
+    name_of_vendor: "",
+    date_of_installation: "",
+    warranty_period: "",
+    date_of_operation: "",
+    has_user_manual: false,
+    
+    // Calibration Details
+    has_calibration_details: false,
+    calibration_lab_name: "",
     calibration_date: "",
+    next_due: "",
     calibration_frequency: "",
-    valid_upto: "",
-    ulr_no: "",
-    coverage_factor: "",
-    master_error: "",
-    error_unit: "",
-    drift_in_standard: "0",
-    plan_type: "Internal",
+    
+    // Machine Maintenance Details
+    has_maintenance_details: true, // Always true, not shown to user
+    maintenance_type: "",
     maintenance_frequency: "",
+    last_maintenance_performed: "",
+    maintenance_service_provider: "",
+    next_scheduled_maintenance_date: "",
+    maintenance_remarks: "",
+    
     documents: [],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadDocumentType, setUploadDocumentType] = useState('');
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState('');
 
-  const handleChange = (field: keyof MachineryFormData, value: string) => {
+  const handleChange = (field: keyof MachineryFormData, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -210,32 +238,13 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
     }
   };
 
-  const handleRadioChange = (field: keyof MachineryFormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-  
-  const handleManualUploadSuccess = (documentId: string, documentName: string) => {
+  const handleUploadSuccess = (documentId: string, documentName: string) => {
     setFormData(prev => ({
       ...prev,
       documents: [...prev.documents, { document: documentId, name: documentName }]
     }));
-    setUploadSuccessMessage(`Instruction Manual "${documentName}" uploaded successfully!`);
-    setIsManualModalOpen(false);
-    setTimeout(() => {
-      setUploadSuccessMessage('');
-    }, 5000);
-  };
-
-  const handleVerificationUploadSuccess = (documentId: string, documentName: string) => {
-    setFormData(prev => ({
-      ...prev,
-      documents: [...prev.documents, { document: documentId, name: documentName }]
-    }));
-    setUploadSuccessMessage(`Verification Conformity "${documentName}" uploaded successfully!`);
-    setIsVerificationModalOpen(false);
+    setUploadSuccessMessage(`Document "${documentName}" uploaded successfully!`);
+    setUploadModalOpen(false);
     setTimeout(() => {
       setUploadSuccessMessage('');
     }, 5000);
@@ -248,18 +257,18 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
     }));
   };
 
+  const openUploadModal = (documentType: string) => {
+    setUploadDocumentType(documentType);
+    setUploadModalOpen(true);
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
-    const requiredFields: (keyof MachineryFormData)[] = [
-      'name', 'lab_id', 'device_type', 'discipline', 'group'
-    ];
-    
-    requiredFields.forEach(field => {
-      if (!formData[field]) {
-        newErrors[field] = `${field.replace('_', ' ')} is required`;
-      }
-    });
+    // Only machine_equipment_name is required as per your request
+    if (!formData.machine_equipment_name) {
+      newErrors.machine_equipment_name = 'Machine/Equipment Name is required';
+    }
     
     setErrors(newErrors);
     
@@ -276,119 +285,41 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {uploadSuccessMessage && (
+        <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-lg">
+          {uploadSuccessMessage}
+        </div>
+      )}
+
+      {/* General Information */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">General Information</h3>
         
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2 text-gray-700">
-            Standard Type
-          </label>
-          <div className="flex space-x-4">
-            <div className="flex items-center">
-              <input
-                type="radio"
-                id="primary"
-                name="standard_type"
-                checked={formData.standard_type === "Primary"}
-                onChange={() => handleRadioChange("standard_type", "Primary")}
-                className="mr-2"
-              />
-              <label htmlFor="primary">Primary</label>
-            </div>
-            <div className="flex items-center">
-              <input
-                type="radio"
-                id="secondary"
-                name="standard_type"
-                checked={formData.standard_type === "Secondary"}
-                onChange={() => handleRadioChange("standard_type", "Secondary")}
-                className="mr-2"
-              />
-              <label htmlFor="secondary">Secondary</label>
-            </div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Discipline <span className="text-red-500">*</span>
-            </label>
-            <InputField
-              type="text"
-              name="discipline"
-              value={formData.discipline}
-              onChange={(e) => handleChange("discipline", e.target.value)}
-              required
-              error={errors.discipline}
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Group <span className="text-red-500">*</span>
-            </label>
-            <InputField
-              type="text"
-              name="group"
-              value={formData.group}
-              onChange={(e) => handleChange("group", e.target.value)}
-              required
-              error={errors.group}
-            />
-          </div>
-        </div>
-        
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2 text-gray-700">
-            Device Type <span className="text-red-500">*</span>
-          </label>
-            <InputField
-              type="text"
-              name="device_type"
-              value={formData.device_type}
-              onChange={(e) => handleChange("device_type", e.target.value)}
-              required
-              error={errors.device_type}
-            />
-        </div>
-        
-        <div className="mb-4">
-          <InputField
-            label="Name"
-            value={formData.name}
-            onChange={(e) => handleChange("name", e.target.value as any)}
-            required
-            error={errors.name}
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <InputField
-              label="Lab ID"
-              value={formData.lab_id}
-              onChange={(e) => handleChange("lab_id", e.target.value as any)}
+              label="Machine/Equipment Name"
+              value={formData.machine_equipment_name}
+              onChange={(e) => handleChange("machine_equipment_name", e.target.value)}
               required
-              error={errors.lab_id}
+              error={errors.machine_equipment_name}
             />
           </div>
           
           <div>
             <InputField
-              label="Sr No."
-              value={formData.sr_no}
-              onChange={(e) => handleChange("sr_no", e.target.value as any)}
+              label="Machine/Equipment Type"
+              value={formData.machine_equipment_type}
+              onChange={(e) => handleChange("machine_equipment_type", e.target.value)}
             />
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          
           <div>
             <InputField
               label="Make"
               value={formData.make}
-              onChange={(e) => handleChange("make", e.target.value as any)}
+              onChange={(e) => handleChange("make", e.target.value)}
             />
           </div>
           
@@ -396,453 +327,294 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
             <InputField
               label="Model"
               value={formData.model}
-              onChange={(e) => handleChange("model", e.target.value as any)}
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Procurement
-            </label>
-            <input
-              type="date"
-              value={formData.procurement}
-              onChange={(e) => handleChange("procurement", e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={(e) => handleChange("model", e.target.value)}
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Commissioning
-            </label>
-            <input
-              type="date"
-              value={formData.commissioning}
-              onChange={(e) => handleChange("commissioning", e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            <InputField
+              label="Serial Number"
+              value={formData.serial_number}
+              onChange={(e) => handleChange("serial_number", e.target.value)}
             />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Instruction Manual
-            </label>
-            <div className="flex space-x-4">
-              <div className="flex items-center">
-                <input
-                  type="radio"
-                  id="manual_yes"
-                  name="instruction_manual"
-                  checked={formData.instruction_manual === "Yes"}
-                  onChange={() => handleRadioChange("instruction_manual", "Yes")}
-                  className="mr-2"
-                />
-                <label htmlFor="manual_yes">Yes</label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="radio"
-                  id="manual_no"
-                  name="instruction_manual"
-                  checked={formData.instruction_manual === "No"}
-                  onChange={() => handleRadioChange("instruction_manual", "No")}
-                  className="mr-2"
-                />
-                <label htmlFor="manual_no">No</label>
-              </div>
-            </div>
           </div>
           
           <div>
             <InputField
               label="Location"
               value={formData.location}
-              onChange={(e) => handleChange("location", e.target.value as any)}
+              onChange={(e) => handleChange("location", e.target.value)}
             />
           </div>
         </div>
-        
-        {formData.instruction_manual === 'Yes' && (
-          <div className="md:col-span-2 mt-6">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Instruction Manual Document</h2>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => setIsManualModalOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload
-                </Button>
-              </div>
-              
-              <div className="space-y-3">
-                {uploadSuccessMessage && (
-                  <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-lg">
-                    {uploadSuccessMessage}
-                  </div>
-                )}
-                {formData.documents && formData.documents.length > 0 ? (
-                  formData.documents.filter(doc => doc.name.includes("Manual")).map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{doc.name}</p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={() => handleRemoveDocument(doc.document)}
-                        className="p-1 text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-gray-500">No documents uploaded yet.</div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-      
+
+      {/* Technical Details */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Technical Specifications</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Tolerance Sign
-            </label>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Technical Details</h3>
+          <div className="flex items-center space-x-4">
+            <label className="text-sm font-medium text-gray-700">Has Technical Details:</label>
             <div className="flex space-x-4">
               <div className="flex items-center">
                 <input
                   type="radio"
-                  id="tolerance_plus"
-                  name="tolerance_sign"
-                  checked={formData.tolerance_sign === "+"}
-                  onChange={() => handleRadioChange("tolerance_sign", "+")}
+                  id="technical_yes"
+                  name="has_technical_details"
+                  checked={formData.has_technical_details === true}
+                  onChange={() => handleChange("has_technical_details", true)}
                   className="mr-2"
                 />
-                <label htmlFor="tolerance_plus">+</label>
+                <label htmlFor="technical_yes">Yes</label>
               </div>
               <div className="flex items-center">
                 <input
                   type="radio"
-                  id="tolerance_minus"
-                  name="tolerance_sign"
-                  checked={formData.tolerance_sign === "-"}
-                  onChange={() => handleRadioChange("tolerance_sign", "-")}
+                  id="technical_no"
+                  name="has_technical_details"
+                  checked={formData.has_technical_details === false}
+                  onChange={() => handleChange("has_technical_details", false)}
                   className="mr-2"
                 />
-                <label htmlFor="tolerance_minus">-</label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="radio"
-                  id="tolerance_plusminus"
-                  name="tolerance_sign"
-                  checked={formData.tolerance_sign === "±"}
-                  onChange={() => handleRadioChange("tolerance_sign", "±")}
-                  className="mr-2"
-                />
-                <label htmlFor="tolerance_plusminus">±</label>
+                <label htmlFor="technical_no">No</label>
               </div>
             </div>
           </div>
-          
-          <div>
-            <InputField
-              label="Acceptance Criteria"
-              value={formData.acceptance_criteria}
-              onChange={(e) => handleChange("acceptance_criteria", e.target.value as any)}
-            />
-          </div>
         </div>
         
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2 text-gray-700">
-            Acceptance Criteria Unit Type
-          </label>
-          <select
-            value={formData.acceptance_criteria_unit_type}
-            onChange={(e) => handleChange("acceptance_criteria_unit_type", e.target.value as any)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Please select</option>
-            {ACCEPTANCE_CRITERIA_UNIT_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium mb-2 text-gray-700">
-            Verification Conformity
-          </label>
-          <div className="flex space-x-4">
-            <div className="flex items-center">
-              <input
-                type="radio"
-                id="verification_yes"
-                name="verification_conformity"
-                checked={formData.verification_conformity === "Yes"}
-                onChange={() => handleRadioChange("verification_conformity", "Yes")}
-                className="mr-2"
+        {formData.has_technical_details && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <InputField
+                label="Range"
+                value={formData.range}
+                onChange={(e) => handleChange("range", e.target.value)}
               />
-              <label htmlFor="verification_yes">Yes</label>
             </div>
-            <div className="flex items-center">
-              <input
-                type="radio"
-                id="verification_no"
-                name="verification_conformity"
-                checked={formData.verification_conformity === "No"}
-                onChange={() => handleRadioChange("verification_conformity", "No")}
-                className="mr-2"
-                />
-              <label htmlFor="verification_no">No</label>
+            
+            <div>
+              <InputField
+                label="Resolution"
+                value={formData.resolution}
+                onChange={(e) => handleChange("resolution", e.target.value)}
+              />
             </div>
-          </div>
-        </div>
-        
-        {formData.verification_conformity === 'Yes' && (
-          <div className="md:col-span-2 mt-6">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Verification Conformity Document</h2>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => setIsVerificationModalOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload
-                </Button>
-              </div>
-              
-              <div className="space-y-3">
-                {uploadSuccessMessage && (
-                  <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-lg">
-                    {uploadSuccessMessage}
-                  </div>
-                )}
-                {formData.documents && formData.documents.length > 0 ? (
-                  formData.documents.filter(doc => doc.name.includes("Conformity")).map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{doc.name}</p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={() => handleRemoveDocument(doc.document)}
-                        className="p-1 text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-gray-500">No documents uploaded yet.</div>
-                )}
-              </div>
+            
+            <div>
+              <InputField
+                label="Accuracy"
+                value={formData.accuracy}
+                onChange={(e) => handleChange("accuracy", e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <InputField
+                label="Capacity"
+                value={formData.capacity}
+                onChange={(e) => handleChange("capacity", e.target.value)}
+              />
+            </div>
+            
+            <div className="md:col-span-2">
+              <InputField
+                label="Accessories"
+                value={formData.accessories}
+                onChange={(e) => handleChange("accessories", e.target.value)}
+              />
             </div>
           </div>
         )}
       </div>
-      
+
+
+
+      {/* Calibration Details */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Calibration Information</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <InputField
-              label="Certificate No."
-              value={formData.certificate_no}
-              onChange={(e) => handleChange("certificate_no", e.target.value as any)}
-            />
-          </div>
-          
-          <div>
-            <InputField
-              label="Calibration Agency"
-              value={formData.calibration_agency}
-              onChange={(e) => handleChange("calibration_agency", e.target.value as any)}
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Calibration Date
-            </label>
-            <input
-              type="date"
-              value={formData.calibration_date}
-              onChange={(e) => handleChange("calibration_date", e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Calibration Frequency in month
-            </label>
-            <select
-              value={formData.calibration_frequency}
-              onChange={(e) => handleChange("calibration_frequency", e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Please Select</option>
-              {FREQUENCY_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Valid Up To
-            </label>
-            <input
-              type="date"
-              value={formData.valid_upto}
-              onChange={(e) => handleChange("valid_upto", e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Calibration Details</h3>
+          <div className="flex items-center space-x-4">
+            <label className="text-sm font-medium text-gray-700">Has Calibration Details:</label>
+            <div className="flex space-x-4">
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="calibration_yes"
+                  name="has_calibration_details"
+                  checked={formData.has_calibration_details === true}
+                  onChange={() => handleChange("has_calibration_details", true)}
+                  className="mr-2"
+                />
+                <label htmlFor="calibration_yes">Yes</label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="calibration_no"
+                  name="has_calibration_details"
+                  checked={formData.has_calibration_details === false}
+                  onChange={() => handleChange("has_calibration_details", false)}
+                  className="mr-2"
+                />
+                <label htmlFor="calibration_no">No</label>
+              </div>
+            </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <InputField
-              label="ULR No."
-              value={formData.ulr_no}
-              onChange={(e) => handleChange("ulr_no", e.target.value as any)}
-            />
-          </div>
-          
-          <div>
-            <InputField
-              label="Coverage Factor"
-              value={formData.coverage_factor}
-              onChange={(e) => handleChange("coverage_factor", e.target.value as any)}
-              type="number"
-            />
-          </div>
-        </div>
+        {formData.has_calibration_details && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <InputField
+                  label="Calibration Lab Name"
+                  value={formData.calibration_lab_name}
+                  onChange={(e) => handleChange("calibration_lab_name", e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Calibration Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.calibration_date}
+                  onChange={(e) => handleChange("calibration_date", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Next Due
+                </label>
+                <input
+                  type="date"
+                  value={formData.next_due}
+                  onChange={(e) => handleChange("next_due", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Calibration Frequency (months)
+                </label>
+                <select
+                  value={formData.calibration_frequency}
+                  onChange={(e) => handleChange("calibration_frequency", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Please Select</option>
+                  {CALIBRATION_FREQUENCY_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => openUploadModal("Calibration Certificate")}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Upload Calibration Certificate
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Machine Maintenance Details */}
+      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Machine Maintenance Details</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Maintenance Type
+            </label>
+            <select
+              value={formData.maintenance_type}
+              onChange={(e) => handleChange("maintenance_type", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Please Select</option>
+              {MAINTENANCE_TYPE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Maintenance Frequency (months)
+            </label>
+            <select
+              value={formData.maintenance_frequency}
+              onChange={(e) => handleChange("maintenance_frequency", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Please Select</option>
+              {MAINTENANCE_FREQUENCY_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
             <InputField
-              label="Master Error"
-              value={formData.master_error}
-              onChange={(e) => handleChange("master_error", e.target.value as any)}
-              type="number"
+              label="Maintenance Service Provider"
+              value={formData.maintenance_service_provider}
+              onChange={(e) => handleChange("maintenance_service_provider", e.target.value)}
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Error Unit
-            </label>
-            <select
-              value={formData.error_unit}
-              onChange={(e) => handleChange("error_unit", e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Please select</option>
-              {ERROR_UNIT_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        
-        <div className="mt-4">
-          <InputField
-            label="Drift in Standard (in %)"
-            value={formData.drift_in_standard}
-            onChange={(e) => handleChange("drift_in_standard", e.target.value as any)}
-            type="number"
-          />
-        </div>
-      </div>
-      
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Maintenance Plan</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Plan Type
-            </label>
-            <div className="flex space-x-4">
-              <div className="flex items-center">
-                <input
-                  type="radio"
-                  id="plan_internal"
-                  name="plan_type"
-                  checked={formData.plan_type === "Internal"}
-                  onChange={() => handleRadioChange("plan_type", "Internal")}
-                  className="mr-2"
-                />
-                <label htmlFor="plan_internal">Internal</label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="radio"
-                  id="plan_external"
-                  name="plan_type"
-                  checked={formData.plan_type === "External"}
-                  onChange={() => handleRadioChange("plan_type", "External")}
-                  className="mr-2"
-                />
-                <label htmlFor="plan_external">External</label>
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Maintenance Frequency in month
-            </label>
-            <select
-              value={formData.maintenance_frequency}
-              onChange={(e) => handleChange("maintenance_frequency", e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Please Select</option>
-              {FREQUENCY_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+            <InputField
+              label="Remarks"
+              value={formData.maintenance_remarks}
+              onChange={(e) => handleChange("maintenance_remarks", e.target.value)}
+            />
           </div>
         </div>
       </div>
+
+      {/* Documents Section */}
+      {formData.documents.length > 0 && (
+        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Uploaded Documents</h3>
+          <div className="space-y-3">
+            {formData.documents.map((doc, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <FileText className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => handleRemoveDocument(doc.document)}
+                  className="p-1 text-red-600 hover:text-red-800"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       
       <div className="flex justify-end">
         <Button
@@ -857,14 +629,10 @@ const MachineryForm: React.FC<MachineryFormProps> = ({ onSubmit, loading = false
       </div>
       
       <DocumentUploadModal
-        isOpen={isManualModalOpen}
-        onClose={() => setIsManualModalOpen(false)}
-        onUploadSuccess={handleManualUploadSuccess}
-      />
-      <DocumentUploadModal
-        isOpen={isVerificationModalOpen}
-        onClose={() => setIsVerificationModalOpen(false)}
-        onUploadSuccess={handleVerificationUploadSuccess}
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onUploadSuccess={handleUploadSuccess}
+        documentType={uploadDocumentType}
       />
     </div>
   );

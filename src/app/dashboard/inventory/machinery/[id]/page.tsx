@@ -35,38 +35,52 @@ interface MachineryDocument {
     _id: string;
 }
 
-// TypeScript interface for all machinery data
+// Updated TypeScript interface for all machinery data to match new schema
 interface Machinery {
     _id: string;
-    standard_type: string;
-    discipline: string;
-    group: string;
-    device_type: string;
-    name: string;
-    lab_id: string;
-    sr_no: string;
+    // General Information
+    machine_equipment_name: string;
+    machine_equipment_type: string;
     make: string;
     model: string;
-    procurement: string;
-    commissioning: string;
-    instruction_manual: string;
+    serial_number: string;
     location: string;
-    tolerance_sign: string;
-    acceptance_criteria: string;
-    acceptance_criteria_unit_type: string;
-    verification_conformity: string;
-    certificate_no: string;
-    calibration_agency: string;
-    calibration_date: string;
+    
+    // Technical Details
+    has_technical_details: boolean;
+    range: string;
+    resolution: string;
+    accuracy: string;
+    capacity: string;
+    accessories: string;
+    
+    // Date & Documentation
+    date_of_purchase?: string;
+    name_of_vendor?: string;
+    date_of_installation?: string;
+    warranty_period?: string;
+    date_of_operation?: string;
+    has_user_manual: boolean;
+    
+    // Calibration Details
+    has_calibration_details: boolean;
+    calibration_lab_name: string;
+    calibration_date?: string;
+    next_due?: string;
     calibration_frequency: string;
-    valid_upto: string;
-    ulr_no: string;
-    coverage_factor: number;
-    master_error: number;
-    error_unit: string;
-    drift_in_standard: number;
-    plan_type: string;
+    
+    // Machine Maintenance Details
+    has_maintenance_details: boolean;
+    maintenance_type: string;
     maintenance_frequency: string;
+    last_maintenance_performed?: string;
+    maintenance_service_provider: string;
+    next_scheduled_maintenance_date?: string;
+    maintenance_remarks: string;
+    
+    // Legacy fields for backward compatibility
+    lab_id?: string;
+    status: string;
     history: History[];
     documents: MachineryDocument[];
     org_id: string;
@@ -90,7 +104,7 @@ interface Document {
     createdAt: string;
     updatedAt: string;
     __v: number;
-  }
+}
 
 const SingleMachineryPage = ({params}:{params:{id:string}}) => {
     const [machinery, setMachinery] = useState<Machinery | null>(null);
@@ -167,7 +181,6 @@ const SingleMachineryPage = ({params}:{params:{id:string}}) => {
       }).filter(Boolean) as Document[];
     };
 
-
     useEffect(()=>{
         fetchMachineryData();
     }, [params.id])
@@ -224,7 +237,7 @@ const SingleMachineryPage = ({params}:{params:{id:string}}) => {
                     <p className="text-gray-600 mb-4">{error || "Machinery not found."}</p>
                     <Button 
                         variant="primary"
-                        onClick={() => router.push('/dashboard/machinery')}
+                        onClick={() => router.push('/dashboard/inventory/machinery')}
                     >
                         Back to Machinery
                     </Button>
@@ -290,10 +303,11 @@ const SingleMachineryPage = ({params}:{params:{id:string}}) => {
                         </button>
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                                {machinery.name}
+                                {machinery.machine_equipment_name}
                             </h1>
                             <p className="text-gray-600 mt-1">
-                                Device Type: {machinery.device_type} • Lab ID: {machinery.lab_id}
+                                {machinery.machine_equipment_type && `Type: ${machinery.machine_equipment_type}`}
+                                {machinery.lab_id && ` • Lab ID: ${machinery.lab_id}`}
                             </p>
                         </div>
                     </div>
@@ -306,84 +320,112 @@ const SingleMachineryPage = ({params}:{params:{id:string}}) => {
                     </Button>
                 </div>
 
-                {/* Main Content */}
+                {/* Main Content - Form Sections Layout */}
                 <div className="space-y-6">
                     {/* General Information */}
                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                         <h2 className="text-xl font-semibold text-gray-900 mb-6">General Information</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            <DataField label="Name" value={machinery.name} />
-                            <DataField label="Lab ID" value={machinery.lab_id} />
-                            <DataField label="Serial No." value={machinery.sr_no} />
+                            <DataField label="Machine/Equipment Name" value={machinery.machine_equipment_name} />
+                            <DataField label="Machine/Equipment Type" value={machinery.machine_equipment_type} />
                             <DataField label="Make" value={machinery.make} />
                             <DataField label="Model" value={machinery.model} />
-                            <DataField label="Standard Type" value={machinery.standard_type} />
-                            <DataField label="Discipline" value={machinery.discipline} />
-                            <DataField label="Group" value={machinery.group} />
-                            <DataField label="Device Type" value={machinery.device_type} />
+                            <DataField label="Serial Number" value={machinery.serial_number} />
                             <DataField label="Location" value={machinery.location} />
                         </div>
                     </div>
 
-                    {/* Dates & Manual */}
-                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-6">Dates & Documentation</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            <DataField label="Procurement Date" value={machinery.procurement ? formatDate(machinery.procurement) : 'N/A'} />
-                            <DataField label="Commissioning Date" value={machinery.commissioning ? formatDate(machinery.commissioning) : 'N/A'} />
-                            <DataField label="Instruction Manual" value={machinery.instruction_manual} />
+                    {/* Technical Details */}
+                    {machinery.has_technical_details && (
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-6">Technical Details</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                <DataField label="Range" value={machinery.range} />
+                                <DataField label="Resolution" value={machinery.resolution} />
+                                <DataField label="Accuracy" value={machinery.accuracy} />
+                                <DataField label="Capacity" value={machinery.capacity} />
+                                <DataField label="Accessories" value={machinery.accessories} />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Calibration & Verification */}
-                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-6">Calibration & Verification</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            <DataField label="Acceptance Criteria" value={`${machinery.tolerance_sign}${machinery.acceptance_criteria} ${machinery.acceptance_criteria_unit_type}`} />
-                            <DataField label="Verification Conformity" value={machinery.verification_conformity} />
-                            <DataField label="Certificate No." value={machinery.certificate_no} />
-                            <DataField label="Calibration Agency" value={machinery.calibration_agency} />
-                            <DataField label="Calibration Date" value={machinery.calibration_date ? formatDate(machinery.calibration_date) : 'N/A'} />
-                            <DataField label="Calibration Frequency" value={`${machinery.calibration_frequency} months`} />
-                            <DataField label="Valid Upto" value={machinery.valid_upto ? formatDate(machinery.valid_upto) : 'N/A'} />
-                            <DataField label="ULR No." value={machinery.ulr_no} />
+                    {/* Date & Documentation */}
+                    {(machinery.date_of_purchase || machinery.name_of_vendor || machinery.date_of_installation || 
+                      machinery.warranty_period || machinery.date_of_operation) && (
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-6">Date & Documentation</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                {machinery.date_of_purchase && (
+                                    <DataField label="Date of Purchase" value={formatDate(machinery.date_of_purchase)} />
+                                )}
+                                {machinery.name_of_vendor && (
+                                    <DataField label="Name of Vendor" value={machinery.name_of_vendor} />
+                                )}
+                                {machinery.date_of_installation && (
+                                    <DataField label="Date of Installation" value={formatDate(machinery.date_of_installation)} />
+                                )}
+                                {machinery.warranty_period && (
+                                    <DataField label="Warranty Period" value={machinery.warranty_period} />
+                                )}
+                                {machinery.date_of_operation && (
+                                    <DataField label="Date of Operation" value={formatDate(machinery.date_of_operation)} />
+                                )}
+                                <DataField label="User Manual" value={machinery.has_user_manual ? 'Yes' : 'No'} />
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* Calibration Details */}
+                    {machinery.has_calibration_details && (
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-6">Calibration Details</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                <DataField label="Calibration Lab Name" value={machinery.calibration_lab_name} />
+                                {machinery.calibration_date && (
+                                    <DataField label="Calibration Date" value={formatDate(machinery.calibration_date)} />
+                                )}
+                                {machinery.next_due && (
+                                    <DataField label="Next Due" value={formatDate(machinery.next_due)} />
+                                )}
+                                <DataField label="Calibration Frequency" value={machinery.calibration_frequency ? `${machinery.calibration_frequency} months` : ''} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Machine Maintenance Details */}
+                    {machinery.has_maintenance_details && (
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-6">Machine Maintenance Details</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                <DataField label="Maintenance Type" value={machinery.maintenance_type} />
+                                <DataField label="Maintenance Frequency" value={machinery.maintenance_frequency ? `${machinery.maintenance_frequency} months` : ''} />
+                                {machinery.last_maintenance_performed && (
+                                    <DataField label="Last Maintenance Performed" value={formatDate(machinery.last_maintenance_performed)} />
+                                )}
+                                <DataField label="Maintenance Service Provider" value={machinery.maintenance_service_provider} />
+                                {machinery.next_scheduled_maintenance_date && (
+                                    <DataField label="Next Scheduled Maintenance Date" value={formatDate(machinery.next_scheduled_maintenance_date)} />
+                                )}
+                                <DataField label="Remarks" value={machinery.maintenance_remarks} />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Documents Section */}
-                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-6">Documents</h2>
-                        
-                        {allDocuments.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {allDocuments.map((doc, index) => (
-                              <DocumentCard
-                                key={`${doc._id}-${index}`}
-                                document={doc}
-                                showActions={false}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                            <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
-                            <p className="text-gray-500">No documents have been uploaded for this machinery yet.</p>
-                          </div>
-                        )}
-                    </div>
-
-                    {/* Maintenance */}
-                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-6">Maintenance Details</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            <DataField label="Plan Type" value={machinery.plan_type} />
-                            <DataField label="Maintenance Frequency" value={`${machinery.maintenance_frequency} months`} />
-                            <DataField label="Coverage Factor" value={machinery.coverage_factor} />
-                            <DataField label="Master Error" value={`${machinery.master_error} ${machinery.error_unit}`} />
-                            <DataField label="Drift in Standard" value={machinery.drift_in_standard} />
+                    {allDocuments.length > 0 && (
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-6">Documents</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {allDocuments.map((doc, index) => (
+                                    <DocumentCard
+                                        key={`${doc._id}-${index}`}
+                                        document={doc}
+                                        showActions={false}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                     
                     {/* Maintenance History */}
                     {machinery.history && machinery.history.length > 0 && <HistoryList history={sortedHistory} />}
@@ -395,7 +437,7 @@ const SingleMachineryPage = ({params}:{params:{id:string}}) => {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 relative">
                   <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    {machinery.name} : Maintenance/Repair Record
+                    {machinery.machine_equipment_name} : Maintenance/Repair Record
                   </h3>
                   <button
                     onClick={() => setIsModalOpen(false)}
