@@ -1,5 +1,13 @@
 import React from "react";
-import { File, MoreVertical, Eye, User, CheckCircle, XCircle, Printer } from "lucide-react";
+import {
+  File,
+  MoreVertical,
+  Eye,
+  User,
+  CheckCircle,
+  XCircle,
+  Printer,
+} from "lucide-react";
 import { Document } from "@/app/dashboard/documents/page";
 
 interface DocumentCardProps {
@@ -97,16 +105,28 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     if (onView) {
       onView(document);
     } else {
-      // Default view behavior
-      window.open(`http://localhost:8001${document.link}`, "_blank");
+      let baseUrl = "http://localhost:8001";
+      if (
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+      ) {
+        baseUrl = "http://localhost:8001";
+      } else {
+        // This assumes the backend is on the same IP as the frontend, just on a different port.
+        baseUrl = `http://${window.location.hostname}:8001`;
+      }
+      window.open(`${baseUrl}${document.link}`, "_blank");
     }
   };
 
   const handlePrint = () => {
     // Open the document in a new window and print it
-    const printWindow = window.open(`http://localhost:8001${document.link}`, "_blank");
+    const printWindow = window.open(
+      `http://localhost:8001${document.link}`,
+      "_blank"
+    );
     if (printWindow) {
-      printWindow.addEventListener('load', () => {
+      printWindow.addEventListener("load", () => {
         printWindow.print();
       });
     }
@@ -117,7 +137,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     if (!name) return "?";
     return name
       .split(" ")
-      .map(part => part[0])
+      .map((part) => part[0])
       .join("")
       .toUpperCase()
       .substring(0, 2);
@@ -158,7 +178,16 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
                   onClick={() => onDelete(document)}
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left flex items-center"
                 >
-                  <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M3 6h18" />
                     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                     <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -173,7 +202,16 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
                   onClick={() => onAmend(document)}
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left flex items-center"
                 >
-                  <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                   </svg>
                   Amend
@@ -255,7 +293,9 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           <div className="flex items-center text-xs text-gray-600">
             <div className="flex items-center gap-1.5">
               <div className="w-5 h-5 flex items-center justify-center bg-blue-100 text-blue-700 rounded-full">
-                <span className="text-xs">{getInitials(document.uploaded_by.name)}</span>
+                <span className="text-xs">
+                  {getInitials(document.uploaded_by.name)}
+                </span>
               </div>
               <User className="w-3 h-3" />
               <span>Uploaded by:</span>
@@ -265,13 +305,15 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
             </div>
           </div>
         )}
-          
+
         {/* Approved by */}
         {document.approved_by?.name && document.status === "approved" && (
           <div className="flex items-center text-xs text-gray-600">
             <div className="flex items-center gap-1.5">
               <div className="w-5 h-5 flex items-center justify-center bg-green-100 text-green-700 rounded-full">
-                <span className="text-xs">{getInitials(document.approved_by.name)}</span>
+                <span className="text-xs">
+                  {getInitials(document.approved_by.name)}
+                </span>
               </div>
               <CheckCircle className="w-3 h-3" />
               <span>Approved by:</span>
@@ -281,13 +323,15 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
             </div>
           </div>
         )}
-          
+
         {/* Rejected by */}
         {document.rejected_by?.name && document.status === "rejected" && (
           <div className="flex items-center text-xs text-gray-600">
             <div className="flex items-center gap-1.5">
               <div className="w-5 h-5 flex items-center justify-center bg-red-100 text-red-700 rounded-full">
-                <span className="text-xs">{getInitials(document.rejected_by.name)}</span>
+                <span className="text-xs">
+                  {getInitials(document.rejected_by.name)}
+                </span>
               </div>
               <XCircle className="w-3 h-3" />
               <span>Rejected by:</span>
@@ -303,7 +347,9 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       <p className="text-sm mb-2 font-medium">
         Status:{" "}
         <span
-          className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(document.status)}`}
+          className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(
+            document.status
+          )}`}
         >
           {getDisplayStatus(document.status)}
         </span>

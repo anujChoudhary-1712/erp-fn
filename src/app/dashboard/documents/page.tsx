@@ -2,13 +2,7 @@
 import { getCookie } from "@/actions/CookieUtils";
 import DocumentApis from "@/actions/Apis/DocumentApis";
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Upload,
-  X,
-  Plus,
-  ChevronDown,
-  File,
-} from "lucide-react";
+import { Upload, X, Plus, ChevronDown, File } from "lucide-react";
 import DocumentCard from "@/components/DocumentCard";
 import CategoryApis from "@/actions/Apis/CategoryApis";
 
@@ -76,9 +70,11 @@ const DocumentsPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  
+
   // State for dynamic categories
-  const [documentCategories, setDocumentCategories] = useState<string[]>(["Others"]);
+  const [documentCategories, setDocumentCategories] = useState<string[]>([
+    "Others",
+  ]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -105,7 +101,10 @@ const DocumentsPage: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setOpenDropdownId(null);
       }
     };
@@ -125,7 +124,7 @@ const DocumentsPage: React.FC = () => {
     formData.append("file", file);
     formData.append("docName", name);
     formData.append("description", desc);
-    
+
     // If category is "Others", use the custom category name
     if (category) {
       if (category === "Others") {
@@ -139,13 +138,16 @@ const DocumentsPage: React.FC = () => {
 
     try {
       const token = getCookie("token");
-      const response = await fetch("http://localhost:8001/api/documents/upload", {
-        method: "POST",
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        "http://localhost:8001/api/documents/upload",
+        {
+          method: "POST",
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to upload document");
@@ -173,7 +175,7 @@ const DocumentsPage: React.FC = () => {
     }
     formData.append("docName", name);
     formData.append("description", desc);
-    
+
     // If category is "Others", use the custom category name
     if (category) {
       if (category === "Others") {
@@ -187,13 +189,16 @@ const DocumentsPage: React.FC = () => {
 
     try {
       const token = getCookie("token");
-      const response = await fetch(`http://localhost:8001/api/documents/${outerId}`, {
-        method: "PUT",
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `http://localhost:8001/api/documents/${outerId}`,
+        {
+          method: "PUT",
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to amend document");
@@ -207,7 +212,11 @@ const DocumentsPage: React.FC = () => {
     }
   };
 
-  const updateDocumentStatus = async (outerId: string, docId: string, status: string) => {
+  const updateDocumentStatus = async (
+    outerId: string,
+    docId: string,
+    status: string
+  ) => {
     try {
       const res = await DocumentApis.updateStatus(outerId, docId, status);
       if (res.status === 200) {
@@ -223,53 +232,67 @@ const DocumentsPage: React.FC = () => {
 
   const fetchDocuments = async (): Promise<void> => {
     try {
-        setIsLoading(true);
-        const res = await DocumentApis.getAllDocuments();
-        if (res.status === 200) {
-            const fetchedActiveDocuments: Document[] = [];
-            const fetchedObsoleteDocuments: Document[] = [];
+      setIsLoading(true);
+      const res = await DocumentApis.getAllDocuments();
+      if (res.status === 200) {
+        const fetchedActiveDocuments: Document[] = [];
+        const fetchedObsoleteDocuments: Document[] = [];
 
-            res.data.forEach((obj: FetchedDocumentObject) => {
-                // Filter out documents with "invoice" in their docName
-                const filteredDocuments = obj.documents.filter(doc =>
-                    !doc.docName.toLowerCase().includes("invoice") && !doc.docName.toLowerCase().includes("attendance")
-                );
+        res.data.forEach((obj: FetchedDocumentObject) => {
+          // Filter out documents with "invoice" in their docName
+          const filteredDocuments = obj.documents.filter(
+            (doc) =>
+              !doc.docName.toLowerCase().includes("invoice") &&
+              !doc.docName.toLowerCase().includes("attendance")
+          );
 
-                const latestDoc = filteredDocuments.find((doc) => doc._id === obj.latest_doc_id);
+          const latestDoc = filteredDocuments.find(
+            (doc) => doc._id === obj.latest_doc_id
+          );
 
-                if (latestDoc) {
-                    fetchedActiveDocuments.push({
-                        ...latestDoc,
-                        outerId: obj._id,
-                        description: latestDoc.description || "No description provided.",
-                        docType: latestDoc.docType || "Uncategorized",
-                        status: latestDoc.status || "uploaded",
-                    });
-                }
-
-                filteredDocuments.forEach((doc) => {
-                    if (doc._id !== obj.latest_doc_id) {
-                        fetchedObsoleteDocuments.push({
-                            ...doc,
-                            outerId: obj._id,
-                            description: doc.description || "No description provided (Obsolete).",
-                            docType: doc.docType || "Uncategorized",
-                            status: doc.status || "obsolete",
-                        });
-                    }
-                });
+          if (latestDoc) {
+            fetchedActiveDocuments.push({
+              ...latestDoc,
+              outerId: obj._id,
+              description: latestDoc.description || "No description provided.",
+              docType: latestDoc.docType || "Uncategorized",
+              status: latestDoc.status || "uploaded",
             });
+          }
 
-            setActiveDocuments(fetchedActiveDocuments);
-            setObsoleteDocuments(fetchedObsoleteDocuments);
-            console.log("Active Documents:", fetchedActiveDocuments);
-            console.log("Obsolete Documents:", fetchedObsoleteDocuments);
-        }
+          filteredDocuments.forEach((doc) => {
+            // Check if the document is not the latest one and its status is not 'obsolete'
+            if (doc._id !== obj.latest_doc_id) {
+              fetchedObsoleteDocuments.push({
+                ...doc,
+                outerId: obj._id,
+                description:
+                  doc.description || "No description provided (Obsolete).",
+                docType: doc.docType || "Uncategorized",
+                status: doc.status || "obsolete",
+              });
+            }
+          });
+        });
+        // Re-filter documents to handle 'obsolete' status correctly
+        const updatedActiveDocs = fetchedActiveDocuments.filter(
+          (doc) => doc.status !== "obsolete"
+        );
+        const updatedObsoleteDocs = [
+          ...fetchedObsoleteDocuments,
+          ...fetchedActiveDocuments.filter((doc) => doc.status === "obsolete"),
+        ];
+
+        setActiveDocuments(updatedActiveDocs);
+        setObsoleteDocuments(updatedObsoleteDocs);
+        console.log("Active Documents:", updatedActiveDocs);
+        console.log("Obsolete Documents:", updatedObsoleteDocs);
+      }
     } catch (error) {
-        console.error("Error fetching documents:", error);
-        alert("Failed to fetch documents. Please try again.");
+      console.error("Error fetching documents:", error);
+      alert("Failed to fetch documents. Please try again.");
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -284,7 +307,7 @@ const DocumentsPage: React.FC = () => {
       setEditingDocument(doc);
       setDocumentName(doc.docName || "");
       setDescription(doc.description || "");
-      
+
       // Check if doc.docType is one of the static categories
       if (doc.docType) {
         if (documentCategories.includes(doc.docType)) {
@@ -351,19 +374,36 @@ const DocumentsPage: React.FC = () => {
         .then(() => closeDocumentModal())
         .finally(() => setIsUploading(false));
     } else if (modalMode === "amend" && editingDocument) {
-      amendDocument(uploadFile, documentName, description, selectedCategory, editingDocument.outerId)
+      amendDocument(
+        uploadFile,
+        documentName,
+        description,
+        selectedCategory,
+        editingDocument.outerId
+      )
         .then(() => closeDocumentModal())
         .finally(() => setIsUploading(false));
     }
   };
 
   const handleView = (doc: Document): void => {
-    window.open(`http://localhost:8001${doc.link}`, "_blank");
+    let baseUrl = "http://localhost:8001";
+    if (
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1"
+    ) {
+      baseUrl = "http://localhost:8001";
+    } else {
+      // This assumes the backend is on the same IP as the frontend, just on a different port.
+      baseUrl = `http://${window.location.hostname}:8001`;
+    }
+    window.open(`${baseUrl}${doc.link}`, "_blank");
   };
 
+  // The change is here:
   const handleDelete = async (doc: Document) => {
     const isConfirmed = window.confirm(
-      `Are you sure you want to delete "${doc.docName}"? This action cannot be undone.`
+      `Are you sure you want to move "${doc.docName}" to obsolete documents?`
     );
 
     if (!isConfirmed) {
@@ -371,14 +411,11 @@ const DocumentsPage: React.FC = () => {
     }
 
     try {
-      const res = await DocumentApis.deleteDocument(doc.outerId);
-      if (res.status === 200) {
-        window.alert("Document deleted successfully.");
-        await fetchDocuments();
-      }
+      // Use the updateDocumentStatus function to set the status to "obsolete"
+      await updateDocumentStatus(doc.outerId, doc._id, "obsolete");
     } catch (error) {
-      console.error("Error deleting document:", error);
-      alert("Failed to delete document. Please try again.");
+      console.error("Error marking document as obsolete:", error);
+      alert("Failed to move document to obsolete. Please try again.");
     }
   };
 
@@ -401,13 +438,16 @@ const DocumentsPage: React.FC = () => {
     setOpenDropdownId(openDropdownId === docId ? null : docId);
   };
 
-  const documentsToDisplay = activeTab === "active" ? activeDocuments : obsoleteDocuments;
+  const documentsToDisplay =
+    activeTab === "active" ? activeDocuments : obsoleteDocuments;
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Document Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Document Management
+        </h1>
         <button
           onClick={() => openDocumentModal("upload")}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -468,11 +508,14 @@ const DocumentsPage: React.FC = () => {
             <div className="col-span-full text-center py-12">
               <File className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No {activeTab === "active" ? "active" : "obsolete"} documents found
+                No {activeTab === "active" ? "active" : "obsolete"} documents
+                found
               </h3>
               {activeTab === "active" && (
                 <>
-                  <p className="text-gray-500 mb-4">Get started by uploading your first document</p>
+                  <p className="text-gray-500 mb-4">
+                    Get started by uploading your first document
+                  </p>
                   <button
                     onClick={() => openDocumentModal("upload")}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2"
@@ -495,7 +538,10 @@ const DocumentsPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900">
                 {modalMode === "upload" ? "Upload Document" : "Amend Document"}
               </h2>
-              <button onClick={closeDocumentModal} className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={closeDocumentModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -515,7 +561,10 @@ const DocumentsPage: React.FC = () => {
                     className="hidden"
                     id="file-upload"
                   />
-                  <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+                  <label
+                    htmlFor="file-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
                     <Upload className="w-8 h-8 text-gray-400 mb-2" />
                     <span className="text-sm text-gray-600">
                       {uploadFile ? uploadFile.name : "Click to upload file"}
@@ -526,7 +575,9 @@ const DocumentsPage: React.FC = () => {
 
               {/* Document Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Document Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Document Name
+                </label>
                 <input
                   type="text"
                   value={documentName}
@@ -538,7 +589,9 @@ const DocumentsPage: React.FC = () => {
 
               {/* Document Category Dropdown */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Document Category</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Document Category
+                </label>
                 <div className="relative">
                   <select
                     value={selectedCategory || ""}
@@ -584,10 +637,14 @@ const DocumentsPage: React.FC = () => {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
                 <textarea
                   value={description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setDescription(e.target.value)
+                  }
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                   placeholder="Enter document description..."
@@ -607,7 +664,8 @@ const DocumentsPage: React.FC = () => {
                   disabled={
                     !documentName.trim() ||
                     !selectedCategory ||
-                    (selectedCategory === "Others" && !otherCategoryName.trim()) ||
+                    (selectedCategory === "Others" &&
+                      !otherCategoryName.trim()) ||
                     (modalMode === "upload" && !uploadFile) ||
                     isUploading
                   }
