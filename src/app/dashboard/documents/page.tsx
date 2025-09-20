@@ -80,20 +80,31 @@ const DocumentsPage: React.FC = () => {
 
   // Function to fetch and set document categories
   const fetchCategories = async (): Promise<void> => {
-    try {
-      const res = await CategoryApis.getAllCategories();
-      if (res.status === 200) {
-        const docCategory = res.data.find(
-          (cat: Category) => cat.type === "Document Category"
-        );
-        if (docCategory) {
-          setDocumentCategories([...docCategory.items, "Others"]);
-        }
+  try {
+    const res = await CategoryApis.getAllCategories();
+    if (res.status === 200) {
+      // Look for category with type "Document" (not "Document Category")
+      const docCategory = res.data.categories.find(
+        (cat: Category) => cat.type === "Document"
+      );
+      
+      if (docCategory && docCategory.items.length > 0) {
+        // Set categories with fetched items plus "Others" at the end
+        setDocumentCategories([...docCategory.items, "Others"]);
+      } else {
+        // If no document category exists or it's empty, just show "Others"
+        setDocumentCategories(["Others"]);
       }
-    } catch (error) {
-      console.error("Failed to fetch categories:", error);
+    } else {
+      // Fallback to just "Others" if API call fails
+      setDocumentCategories(["Others"]);
     }
-  };
+  } catch (error) {
+    console.error("Failed to fetch categories:", error);
+    // Fallback to just "Others" on error
+    setDocumentCategories(["Others"]);
+  }
+};
 
   useEffect(() => {
     fetchCategories();

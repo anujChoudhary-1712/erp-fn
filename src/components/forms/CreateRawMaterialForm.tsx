@@ -101,29 +101,38 @@ const CreateRawMaterialForm: React.FC<CreateRawMaterialFormProps> = ({
   }, [productId]);
 
   // Effect to fetch categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      setIsCategoriesLoading(true);
-      try {
-        const res = await CategoryApis.getAllCategories();
-        if (res.status === 200) {
-          const rawMaterialCategory = res.data.find(
-            (cat: Category) => cat.type === "Raw Material Category"
-          );
-          if (rawMaterialCategory) {
-            setRawMaterialCategories([...rawMaterialCategory.items, "other"]);
-          } else {
-            setRawMaterialCategories([]);
-          }
+ useEffect(() => {
+  const fetchCategories = async () => {
+    setIsCategoriesLoading(true);
+    try {
+      const res = await CategoryApis.getAllCategories();
+      if (res.status === 200) {
+        // Look for category with type "Raw Material" (not "Raw Material Category")
+        const rawMaterialCategory = res.data.categories.find(
+          (cat: Category) => cat.type === "Raw Material"
+        );
+        
+        if (rawMaterialCategory && rawMaterialCategory.items.length > 0) {
+          // Set categories with fetched items plus "other" at the end
+          setRawMaterialCategories([...rawMaterialCategory.items, "other"]);
+        } else {
+          // If no raw material category exists or it's empty, just show "other"
+          setRawMaterialCategories(["other"]);
         }
-      } catch (error) {
-        console.error("Failed to fetch categories:", error);
-      } finally {
-        setIsCategoriesLoading(false);
+      } else {
+        // Fallback to just "other" if API call fails
+        setRawMaterialCategories(["other"]);
       }
-    };
-    fetchCategories();
-  }, []);
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+      // Fallback to just "other" on error
+      setRawMaterialCategories(["other"]);
+    } finally {
+      setIsCategoriesLoading(false);
+    }
+  };
+  fetchCategories();
+}, []);
 
   // Function to calculate area when length and width dimensions are present
   const calculateArea = (
