@@ -810,7 +810,7 @@ const SinglePurchasePage = ({ params }: { params: { id: string } }) => {
                   <div className="flex justify-end mt-4">
                     <Button 
                       variant="primary" 
-                      onClick={() => purchase.machineryId && router.push(`/dashboard/inventory/machinery/${purchase.machineryId.lab_id}`)}
+                      onClick={() => purchase.machineryId && router.push(`/dashboard/inventory/machinery/${purchase.machineryId._id}`)}
                       className="text-sm"
                     >
                       View All Details

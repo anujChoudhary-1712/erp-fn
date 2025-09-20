@@ -5,6 +5,7 @@ import ProductionPlanApis from "@/actions/Apis/ProductionPlanApis";
 import GoodsApis from "@/actions/Apis/GoodsApis";
 import Button from "@/components/ReusableComponents/Button";
 import { useUser } from "@/context/UserContext";
+import { AssignedTo, QualityParameter } from "@/components/forms/CreateWorkflowForm";
 
 // TypeScript interfaces
 interface FinishedGood {
@@ -13,8 +14,25 @@ interface FinishedGood {
   unit: string;
   unit_price: number;
   current_stock: number;
-  workflows: string[]; // Array of workflow IDs
+  workflows: Workflow[]; // Changed from string[] to Workflow[]
   raw_materials_used: RawMaterial[];
+}
+
+// Add Workflow interface
+interface Workflow {
+  _id: string;
+  workflow_name: string;
+  finished_product_id: string;
+  stages: WorkflowStage[];
+}
+
+interface WorkflowStage {
+  stage_id: string;
+  stage_name: string;
+  sequence_order: number;
+  quality_check_required: boolean;
+  quality_parameters?: QualityParameter[];
+  assignedTo?: AssignedTo;
 }
 
 interface RawMaterial {
@@ -176,64 +194,61 @@ const CreateProductionPlanPage: React.FC = () => {
   };
 
   // Update production item
-  const handleProductionItemChange = (index: number, field: keyof ProductionItem, value: any) => {
-    setProductionPlan(prev => {
-      const updatedItems = [...prev.production_items];
-      updatedItems[index] = {
-        ...updatedItems[index],
-        [field]: value
-      };
+const handleProductionItemChange = (index: number, field: keyof ProductionItem, value: any) => {
+  setProductionPlan(prev => {
+    const updatedItems = [...prev.production_items];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value
+    };
 
-      // If the product changes, automatically select the first workflow
-      if (field === "finished_good_id") {
-        const selectedProduct = finishedGoods.find(p => p._id === value);
-        
-        // Set the workflow ID to the first workflow in the product's workflows array
-        if (selectedProduct && selectedProduct.workflows && selectedProduct.workflows.length > 0) {
-          updatedItems[index].workflow_id = selectedProduct.workflows[0];
-        } else {
-          updatedItems[index].workflow_id = "";
-        }
-        
-        // Calculate raw materials based on the selected product
-        if (selectedProduct && selectedProduct.raw_materials_used) {
-          const quantity = updatedItems[index].quantity_planned;
-          
-          updatedItems[index].raw_materials = selectedProduct.raw_materials_used.map(material => {
-            const requiredQuantity = material.stock_used * quantity;
-            return {
-              material_id: material._id,
-              quantity_required: requiredQuantity,
-              status: material.current_stock >= requiredQuantity ? "Pending" : "Insufficient"
-            };
-          });
-        }
-      }
+    // If the product changes, reset workflow and calculate materials
+    if (field === "finished_good_id") {
+      const selectedProduct = finishedGoods.find(p => p._id === value);
       
-      // If quantity changes, recalculate material requirements
-      if (field === "quantity_planned") {
-        const selectedProduct = finishedGoods.find(p => p._id === updatedItems[index].finished_good_id);
+      // Reset workflow selection when product changes
+      updatedItems[index].workflow_id = "";
+      
+      // Calculate raw materials based on the selected product
+      if (selectedProduct && selectedProduct.raw_materials_used) {
+        const quantity = updatedItems[index].quantity_planned;
         
-        if (selectedProduct && selectedProduct.raw_materials_used) {
-          const quantity = value;
-          
-          updatedItems[index].raw_materials = selectedProduct.raw_materials_used.map(material => {
-            const requiredQuantity = material.stock_used * quantity;
-            return {
-              material_id: material._id,
-              quantity_required: requiredQuantity,
-              status: material.current_stock >= requiredQuantity ? "Pending" : "Insufficient"
-            };
-          });
-        }
+        updatedItems[index].raw_materials = selectedProduct.raw_materials_used.map(material => {
+          const requiredQuantity = material.stock_used * quantity;
+          return {
+            material_id: material._id,
+            quantity_required: requiredQuantity,
+            status: material.current_stock >= requiredQuantity ? "Available" : "Insufficient"
+          };
+        });
       }
+    }
+    
+    // If quantity changes, recalculate material requirements
+    if (field === "quantity_planned") {
+      const selectedProduct = finishedGoods.find(p => p._id === updatedItems[index].finished_good_id);
+      
+      if (selectedProduct && selectedProduct.raw_materials_used) {
+        const quantity = value;
+        
+        updatedItems[index].raw_materials = selectedProduct.raw_materials_used.map(material => {
+          const requiredQuantity = material.stock_used * quantity;
+          return {
+            material_id: material._id,
+            quantity_required: requiredQuantity,
+            status: material.current_stock >= requiredQuantity ? "Available" : "Insufficient"
+          };
+        });
+      }
+    }
 
-      return {
-        ...prev,
-        production_items: updatedItems
-      };
-    });
-  };
+    return {
+      ...prev,
+      production_items: updatedItems
+    };
+  });
+};
+
 
   // Remove production item
   const handleRemoveProductionItem = (index: number) => {
@@ -477,235 +492,276 @@ const CreateProductionPlanPage: React.FC = () => {
   };
 
   // Step 2: Production Items Form
-  const renderProductionItemsForm = () => {
-    return (
-      <div className="max-w-3xl mx-auto space-y-8">
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Production Items
-            </h3>
-            <Button
-              variant="outline"
-              onClick={handleAddProductionItem}
-              className="text-sm"
+ const renderProductionItemsForm = () => {
+  return (
+    <div className="max-w-3xl mx-auto space-y-8">
+      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Production Items
+          </h3>
+          <Button
+            variant="outline"
+            onClick={handleAddProductionItem}
+            className="text-sm"
+          >
+            + Add Item
+          </Button>
+        </div>
+
+        {productionPlan.production_items.length === 0 ? (
+          <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              + Add Item
-            </Button>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1}
+                d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">
+              No items added
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Click &quot;Add Item&quot; to add products to your production plan.
+            </p>
           </div>
+        ) : (
+          <div className="space-y-6">
+            {productionPlan.production_items.map((item, index) => {
+              // Get the selected product for display
+              const selectedProduct = finishedGoods.find(
+                (product) => product._id === item.finished_good_id
+              );
 
-          {productionPlan.production_items.length === 0 ? (
-            <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1}
-                  d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
-                No items added
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Click &quot;Add Item&quot; to add products to your production plan.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {productionPlan.production_items.map((item, index) => {
-                // Get the selected product for display
-                const selectedProduct = finishedGoods.find(
-                  (product) => product._id === item.finished_good_id
-                );
+              return (
+                <div
+                  key={index}
+                  className="p-4 border border-gray-200 rounded-md bg-gray-50"
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center">
+                      <span className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs mr-2">
+                        {index + 1}
+                      </span>
+                      <h5 className="text-sm font-medium text-gray-700">
+                        Production Item
+                      </h5>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveProductionItem(index)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
 
-                return (
-                  <div
-                    key={index}
-                    className="p-4 border border-gray-200 rounded-md bg-gray-50"
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center">
-                        <span className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs mr-2">
-                          {index + 1}
-                        </span>
-                        <h5 className="text-sm font-medium text-gray-700">
-                          Production Item
-                        </h5>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveProductionItem(index)}
-                        className="text-red-600 hover:text-red-800 text-sm"
+                  <div className="space-y-4">
+                    {/* Product Selection */}
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-gray-700">
+                        Product <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <select
+                        value={item.finished_good_id}
+                        onChange={(e) =>
+                          handleProductionItemChange(
+                            index,
+                            "finished_good_id",
+                            e.target.value
+                          )
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
                       >
-                        Remove
-                      </button>
+                        <option value="">Select a product</option>
+                        {finishedGoods.map((product) => (
+                          <option key={product._id} value={product._id}>
+                            {product.product_name} ({product.unit})
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
-                    <div className="space-y-4">
-                      {/* Product Selection */}
+                    {/* Workflow Selection - Only show if product is selected */}
+                    {selectedProduct && selectedProduct.workflows && selectedProduct.workflows.length > 0 && (
                       <div>
                         <label className="block text-xs font-medium mb-1 text-gray-700">
-                          Product <span className="text-red-500 ml-1">*</span>
+                          Production Workflow <span className="text-red-500 ml-1">*</span>
                         </label>
                         <select
-                          value={item.finished_good_id}
+                          value={item.workflow_id}
                           onChange={(e) =>
                             handleProductionItemChange(
                               index,
-                              "finished_good_id",
+                              "workflow_id",
                               e.target.value
                             )
                           }
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           required
                         >
-                          <option value="">Select a product</option>
-                          {finishedGoods.map((product) => (
-                            <option key={product._id} value={product._id}>
-                              {product.product_name} ({product.unit})
+                          <option value="">Select a workflow</option>
+                          {selectedProduct.workflows.map((workflow) => (
+                            <option key={workflow._id} value={workflow._id}>
+                              {workflow.workflow_name} ({workflow.stages.length} stages)
                             </option>
                           ))}
                         </select>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Choose the production workflow to follow for this item
+                        </p>
                       </div>
+                    )}
 
-                      {/* Quantity */}
-                      <div>
-                        <label className="block text-xs font-medium mb-1 text-gray-700">
-                          Quantity <span className="text-red-500 ml-1">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity_planned}
-                          onChange={(e) =>
-                            handleProductionItemChange(
-                              index,
-                              "quantity_planned",
-                              parseInt(e.target.value)
-                            )
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
-                        {selectedProduct && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Current stock: {selectedProduct.current_stock} {selectedProduct.unit}
-                          </p>
-                        )}
+                    {/* Show message if no workflows available */}
+                    {selectedProduct && (!selectedProduct.workflows || selectedProduct.workflows.length === 0) && (
+                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <p className="text-xs text-yellow-800">
+                          ⚠️ No workflows defined for this product. You may need to create a workflow first.
+                        </p>
                       </div>
+                    )}
 
-                      {/* Raw Materials (if any) */}
-                      {item.raw_materials && item.raw_materials.length > 0 && (
-                        <div className="mt-4">
-                          <h6 className="text-xs font-medium text-gray-700 mb-2">
-                            Required Raw Materials
-                          </h6>
-                          <div className="border border-gray-200 rounded-md overflow-hidden">
-                            <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-100">
-                                <tr>
-                                  <th
-                                    scope="col"
-                                    className="px-4 py-2 text-xs font-medium text-gray-500 text-left"
-                                  >
-                                    Material
-                                  </th>
-                                  <th
-                                    scope="col"
-                                    className="px-4 py-2 text-xs font-medium text-gray-500 text-right"
-                                  >
-                                    Required
-                                  </th>
-                                  <th
-                                    scope="col"
-                                    className="px-4 py-2 text-xs font-medium text-gray-500 text-right"
-                                  >
-                                    Available
-                                  </th>
-                                  <th
-                                    scope="col"
-                                    className="px-4 py-2 text-xs font-medium text-gray-500 text-center"
-                                  >
-                                    Status
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {item.raw_materials.map((material, matIndex) => {
-                                  // Get material details from the selected product's raw_materials_used
-                                  const materialDetails = selectedProduct?.raw_materials_used.find(
-                                    m => m._id === material.material_id
-                                  );
-                                  
-                                  return (
-                                    <tr key={matIndex}>
-                                      <td className="px-4 py-2 text-xs text-gray-900">
-                                        {materialDetails?.material_name || "Unknown Material"}
-                                      </td>
-                                      <td className="px-4 py-2 text-xs text-gray-900 text-right">
-                                        {material.quantity_required} {materialDetails?.unit}
-                                      </td>
-                                      <td className="px-4 py-2 text-xs text-gray-900 text-right">
-                                        {materialDetails?.current_stock} {materialDetails?.unit}
-                                      </td>
-                                      <td className="px-4 py-2 text-xs text-center">
-                                        <span
-                                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                            material.status === "Insufficient"
-                                              ? "bg-red-100 text-red-800"
-                                              : "bg-green-100 text-green-800"
-                                          }`}
-                                        >
-                                          {material.status}
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
+                    {/* Quantity */}
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-gray-700">
+                        Quantity <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity_planned}
+                        onChange={(e) =>
+                          handleProductionItemChange(
+                            index,
+                            "quantity_planned",
+                            parseInt(e.target.value)
+                          )
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                      {selectedProduct && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Current stock: {selectedProduct.current_stock} {selectedProduct.unit}
+                        </p>
                       )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentStep(1)}
-            className="px-4 py-2"
-          >
-            Back
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            className="px-4 py-2"
-            disabled={
-              loading || 
-              productionPlan.production_items.length === 0 ||
-              productionPlan.production_items.some(item => !item.finished_good_id)
-            }
-          >
-            {loading ? "Creating..." : "Create Production Plan"}
-          </Button>
-        </div>
+                    {/* Raw Materials (if any) */}
+                    {item.raw_materials && item.raw_materials.length > 0 && (
+                      <div className="mt-4">
+                        <h6 className="text-xs font-medium text-gray-700 mb-2">
+                          Required Raw Materials
+                        </h6>
+                        <div className="border border-gray-200 rounded-md overflow-hidden">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-100">
+                              <tr>
+                                <th
+                                  scope="col"
+                                  className="px-4 py-2 text-xs font-medium text-gray-500 text-left"
+                                >
+                                  Material
+                                </th>
+                                <th
+                                  scope="col"
+                                  className="px-4 py-2 text-xs font-medium text-gray-500 text-right"
+                                >
+                                  Required
+                                </th>
+                                <th
+                                  scope="col"
+                                  className="px-4 py-2 text-xs font-medium text-gray-500 text-right"
+                                >
+                                  Available
+                                </th>
+                                <th
+                                  scope="col"
+                                  className="px-4 py-2 text-xs font-medium text-gray-500 text-center"
+                                >
+                                  Status
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {item.raw_materials.map((material, matIndex) => {
+                                // Get material details from the selected product's raw_materials_used
+                                const materialDetails = selectedProduct?.raw_materials_used.find(
+                                  m => m._id === material.material_id
+                                );
+                                
+                                return (
+                                  <tr key={matIndex}>
+                                    <td className="px-4 py-2 text-xs text-gray-900">
+                                      {materialDetails?.material_name || "Unknown Material"}
+                                    </td>
+                                    <td className="px-4 py-2 text-xs text-gray-900 text-right">
+                                      {material.quantity_required} {materialDetails?.unit}
+                                    </td>
+                                    <td className="px-4 py-2 text-xs text-gray-900 text-right">
+                                      {materialDetails?.current_stock} {materialDetails?.unit}
+                                    </td>
+                                    <td className="px-4 py-2 text-xs text-center">
+                                      <span
+                                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                          material.status === "Insufficient"
+                                            ? "bg-red-100 text-red-800"
+                                            : "bg-green-100 text-green-800"
+                                        }`}
+                                      >
+                                        {material.status}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-    );
-  };
+
+      {/* Navigation Buttons */}
+      <div className="flex justify-between space-x-4">
+        <Button
+          variant="outline"
+          onClick={() => setCurrentStep(1)}
+          className="px-4 py-2"
+        >
+          Back
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleSubmit}
+          className="px-4 py-2"
+          disabled={
+            loading || 
+            productionPlan.production_items.length === 0 ||
+            productionPlan.production_items.some(item => !item.finished_good_id || !item.workflow_id)
+          }
+        >
+          {loading ? "Creating..." : "Create Production Plan"}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

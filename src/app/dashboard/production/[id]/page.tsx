@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { useRouter } from "next/navigation";
 import ManufacturingBatchApis from "@/actions/Apis/BatchApis";
 import Button from "@/components/ReusableComponents/Button";
@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import InputField from "@/components/ReusableComponents/InputField";
 import { useReactToPrint } from "react-to-print";
+import Image from "next/image";
+import proscaLogo from "../../../../../public/images/logo.png";
+import { useUser } from "@/context/UserContext";
 
 interface FinishedGood {
   product_name: string;
@@ -40,12 +43,20 @@ interface Disposition {
   quantity_rejected: number;
 }
 
+interface SampleData {
+  parameter: string;
+  specification: string;
+  observed_value: string;
+  passed: boolean;
+}
+
 interface QualityCheckRecord {
   _id: string;
   overall_result: "pass" | "fail" | "rework" | "partial";
   disposition: Disposition;
   notes: string;
   check_date: string;
+  samples_data?: SampleData[];
 }
 
 interface StageHistory {
@@ -56,7 +67,6 @@ interface StageHistory {
   quality_checks?: QualityCheckRecord[];
 }
 
-// Added interfaces for new data
 interface ProductionPlan {
   _id: string;
   plan_type: string;
@@ -79,7 +89,7 @@ interface RawMaterialUsed {
 interface ManufacturingBatch {
   _id: string;
   batch_number: string;
-  production_plan_id: ProductionPlan; // Added production plan interface
+  production_plan_id: ProductionPlan;
   finished_good_id: FinishedGood;
   quantity_planned: number;
   quantity_produced: number;
@@ -94,7 +104,7 @@ interface ManufacturingBatch {
   };
   rework_items: ReworkItem[];
   stages_history: StageHistory[];
-  raw_materials_used: RawMaterialUsed[]; // Added raw materials interface
+  raw_materials_used: RawMaterialUsed[];
   status: "Draft" | "In Progress" | "Completed" | "Rejected" | "On Hold";
   workflow_id: {
     _id: string;
@@ -103,7 +113,6 @@ interface ManufacturingBatch {
   };
 }
 
-// Interface for the detailed sample data form
 interface SampleDataForForm {
   sample_number: number;
   parameters: {
@@ -121,12 +130,10 @@ const QualityCheckModal: React.FC<{
   batch: ManufacturingBatch;
   submitting: boolean;
 }> = ({ isOpen, onClose, onSubmit, batch, submitting }) => {
-  // State for detailed sample checks
   const [qualityCheckParams, setQualityCheckParams] = useState<any[]>([]);
   const [numberOfSamples, setNumberOfSamples] = useState<number>(1);
   const [samplesData, setSamplesData] = useState<SampleDataForForm[]>([]);
 
-  // State for disposition
   const [passed, setPassed] = useState(0);
   const [rework, setRework] = useState(0);
   const [rejected, setRejected] = useState(0);
@@ -136,7 +143,6 @@ const QualityCheckModal: React.FC<{
 
   const quantityAtStage = batch.current_stage?.quantity || 0;
 
-  // Fetch parameters and initialize the form when modal opens
   useEffect(() => {
     if (isOpen && batch.current_stage) {
       const fetchAndInit = async () => {
@@ -187,7 +193,6 @@ const QualityCheckModal: React.FC<{
     setSamplesData(updatedSamples);
   };
 
-  // Validate disposition quantities
   useEffect(() => {
     const total = passed + rework + rejected;
     if (total !== quantityAtStage) {
@@ -201,6 +206,7 @@ const QualityCheckModal: React.FC<{
 
   const handleSubmit = () => {
     if (error) return;
+
     const flattenedSamplesData = samplesData.flatMap((sample) =>
       sample.parameters.map((param) => ({
         parameter: param.parameter_name,
@@ -216,7 +222,7 @@ const QualityCheckModal: React.FC<{
         quantity_for_rework: rework,
         quantity_rejected: rejected,
       },
-      rework_reason: reworkReason,
+      rework_reason: rework > 0 ? reworkReason : undefined,
       notes: notes,
       samples_data: flattenedSamplesData,
     };
@@ -230,7 +236,6 @@ const QualityCheckModal: React.FC<{
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl">
         <h3 className="text-xl font-semibold mb-4">Perform Quality Check</h3>
         <div className="max-h-[75vh] overflow-y-auto pr-4 space-y-6">
-          {/* --- Step 1: Detailed Quality Check --- */}
           <div className="p-4 border rounded-lg">
             <h4 className="font-semibold text-gray-800 mb-4">
               Detailed Sample Analysis
@@ -305,7 +310,6 @@ const QualityCheckModal: React.FC<{
             </div>
           </div>
 
-          {/* --- Step 2: Final Disposition --- */}
           <div className="p-4 border rounded-lg">
             <h4 className="font-semibold text-gray-800 mb-2">
               Final Disposition
@@ -388,7 +392,6 @@ const ResolveReworkModal: React.FC<{
   reworkItem: ReworkItem | null;
   submitting: boolean;
 }> = ({ isOpen, onClose, onSubmit, reworkItem, submitting }) => {
-  // Hooks are safe here
   const [passed, setPassed] = useState(0);
   const [rejected, setRejected] = useState(0);
   const [notes, setNotes] = useState("");
@@ -497,12 +500,147 @@ const getStatusColor = (status: string) => {
   }
 };
 
+interface PrintableBatchReportProps {
+  batch: ManufacturingBatch;
+  companyName: string;
+  companyAddress: string;
+  logoSrc?: string;
+}
+
+const PrintableBatchReport = forwardRef<HTMLDivElement, PrintableBatchReportProps>(
+  ({ batch, companyName, companyAddress, logoSrc }, ref) => (
+    <div ref={ref} className="p-8 bg-white text-black" style={{ fontFamily: 'Arial, sans-serif' }}>
+      {/* Header with Logo and Company Info */}
+      <div className="flex items-start justify-between mb-8">
+        <div className="border border-black p-2 flex items-center justify-center" style={{ width: '120px', height: '80px' }}>
+          <img
+            src={logoSrc || proscaLogo.src}
+            alt="Company Logo"
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+          />
+        </div>
+        <div className="flex-1 ml-6 border border-black p-4 flex items-center justify-center" style={{ height: '80px' }}>
+          <div className="text-center">
+            <h1 className="text-base font-bold mb-1">{companyName}</h1>
+            <p className="text-sm">{companyAddress}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Horizontal line */}
+      <div className="border-t border-black mb-6"></div>
+
+      {/* Title */}
+      <div className="text-center mb-6">
+        <h2 className="text-lg font-bold">Quality Test Report</h2>
+      </div>
+
+      {/* Report Details */}
+      <div className="grid grid-cols-2 gap-x-16 gap-y-2 mb-8 text-sm">
+        <div>
+          <span className="font-medium">Date of Inspection:</span> {formatDate(new Date().toISOString())}
+        </div>
+        <div>
+          <span className="font-medium">Report No:</span> {batch.batch_number}
+        </div>
+        <div>
+          <span className="font-medium">Product Name:</span> {batch.finished_good_id.product_name}
+        </div>
+        <div>
+          <span className="font-medium">Lot/Batch No:</span> {batch.lot_number}
+        </div>
+        <div>
+          <span className="font-medium">Samples Drawn:</span> {batch.stages_history?.reduce((total, stage) => 
+            total + (stage.quality_checks?.reduce((qcTotal, qc) => qcTotal + (qc.samples_data?.length || 0), 0) || 0), 0) || 0}
+        </div>
+        <div>
+          <span className="font-medium">Applicable Test Method:</span> Quality Control Standards
+        </div>
+      </div>
+
+      {/* Test Summary Table - NOW AT THE TOP */}
+      <div className="mb-8">
+        <h3 className="text-sm font-medium mb-3 text-center">Test Summary</h3>
+        <table className="w-full border-collapse border border-black text-sm">
+          <thead>
+            <tr>
+              <th className="border border-black p-3 text-center font-medium bg-gray-100">Tested Quantity</th>
+              <th className="border border-black p-3 text-center font-medium bg-gray-100">Accepted Quantity</th>
+              <th className="border border-black p-3 text-center font-medium bg-gray-100">Rejected Quantity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="border border-black p-3 text-center">{batch.quantity_planned}</td>
+              <td className="border border-black p-3 text-center">{batch.quantity_produced}</td>
+              <td className="border border-black p-3 text-center">{batch.quantity_rejected}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Detailed Test Results - Now comes AFTER Test Summary */}
+      {batch.stages_history && batch.stages_history.length > 0 && (
+        <div className="mb-8">
+          {batch.stages_history.map((history, stageIndex) => (
+            history.quality_checks && history.quality_checks.length > 0 && (
+              <div key={stageIndex} className="mb-6">
+                <h4 className="text-sm font-medium mb-2">Stage: {history.stage_name}</h4>
+                {history.quality_checks.map((qc, qcIndex) => (
+                  <div key={qcIndex} className="mb-4">
+                    <p className="text-sm mb-2">
+                      <span className="font-medium">QC Date:</span> {formatDate(qc.check_date)}
+                    </p>
+                    {/* Only show table if there's sample data */}
+                    {qc.samples_data && qc.samples_data.length > 0 ? (
+                      <table className="w-full border-collapse border border-black text-sm">
+                        <thead>
+                          <tr>
+                            <th className="border border-black p-2 text-center font-medium bg-gray-100">S.No.</th>
+                            <th className="border border-black p-2 text-center font-medium bg-gray-100">Parameter</th>
+                            <th className="border border-black p-2 text-center font-medium bg-gray-100">Specified Value</th>
+                            <th className="border border-black p-2 text-center font-medium bg-gray-100">Observed Value</th>
+                            <th className="border border-black p-2 text-center font-medium bg-gray-100">Result (Pass/Fail)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {qc.samples_data.map((sample, sampleIndex) => (
+                            <tr key={sampleIndex}>
+                              <td className="border border-black p-2 text-center">{sampleIndex + 1}</td>
+                              <td className="border border-black p-2 text-center">{sample.parameter}</td>
+                              <td className="border border-black p-2 text-center">{sample.specification}</td>
+                              <td className="border border-black p-2 text-center">{sample.observed_value}</td>
+                              <td className="border border-black p-2 text-center font-medium">
+                                {sample.passed ? 'Pass' : 'Fail'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      // Show message when no sample data exists
+                      <p className="text-sm text-gray-600 italic">No sample data available for this quality check.</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
+          ))}
+        </div>
+      )}
+    </div>
+  )
+);
+
+PrintableBatchReport.displayName = 'PrintableBatchReport';
+
 const SingleManufacturingBatchPage = ({
   params,
 }: {
   params: { id: string };
 }) => {
   const router = useRouter();
+  const { organization } = useUser();
   const [batch, setBatch] = useState<ManufacturingBatch | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
@@ -515,23 +653,26 @@ const SingleManufacturingBatchPage = ({
   const [selectedReworkItem, setSelectedReworkItem] =
     useState<ReworkItem | null>(null);
 
-  // FIXED: Proper typing for the ref - it should reference an HTMLDivElement
-  const componentRef = useRef<HTMLDivElement>(null);
-  
-  // FIXED: Use contentRef instead of content callback
+  // Use useRef for the print component reference
+  const printRef = useRef<HTMLDivElement>(null);
+
+  // Updated useReactToPrint configuration
   const handlePrint = useReactToPrint({
-    contentRef: componentRef,
+    contentRef: printRef,
     documentTitle: `Batch_${batch?.batch_number}_Report`,
-    onBeforePrint: async () => {
-      console.log("Preparing to print...");
-      // Add any async operations here if needed
+    onBeforePrint: () => {
+      return new Promise<void>((resolve) => {
+        // Add any pre-print logic here
+        setTimeout(() => {
+          resolve();
+        }, 100);
+      });
     },
     onAfterPrint: () => {
       console.log("Print completed!");
     },
     onPrintError: (error) => {
       console.error("Print error:", error);
-      // Optionally, you can set an error state or show a notification to the user
       setError("Failed to print. Please try again.");
     }
   });
@@ -607,7 +748,6 @@ const SingleManufacturingBatchPage = ({
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
-      {/* PDF Download and Batch Info Header */}
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
@@ -641,17 +781,19 @@ const SingleManufacturingBatchPage = ({
         </div>
       )}
 
-      {/* Main Content to be printed */}
-      <div
-        ref={componentRef}
-        className="print:p-6 print:bg-white print:shadow-none"
-      >
-        <h1 className="hidden print:block text-2xl font-bold mb-4">
-          Batch Report: #{batch.batch_number}
-        </h1>
+      {/* Hidden print component */}
+      <div className="hidden">
+        <PrintableBatchReport
+          ref={printRef}
+          batch={batch}
+          companyName={organization?.name || "Prosca"}
+          companyAddress={organization?.company_address || ""}
+          logoSrc={organization?.logo || proscaLogo.src}
+        />
+      </div>
 
-        {/* Batch Progress */}
-        <div className="bg-white p-6 rounded-lg border shadow-sm print:shadow-none print:border-0 print:p-0">
+      <div className="space-y-6">
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
             Batch Progress
           </h3>
@@ -678,16 +820,15 @@ const SingleManufacturingBatchPage = ({
             </div>
             <div className="p-2 bg-red-50 rounded-lg">
               <p className="text-sm text-red-600 font-semibold">REJECTED</p>
-              <p className="text-2xl font-bold text-red-700">
+              <p className="text-2xl font-bold text-red-800">
                 {batch.quantity_rejected}
               </p>
             </div>
           </div>
         </div>
 
-        {/* New Production Plan Details Section */}
         {batch.production_plan_id && (
-          <div className="bg-white p-6 rounded-lg border shadow-sm print:shadow-none print:border-0 print:p-0 mt-6">
+          <div className="bg-white p-6 rounded-lg border shadow-sm mt-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">
               Production Plan Details
             </h3>
@@ -709,9 +850,8 @@ const SingleManufacturingBatchPage = ({
           </div>
         )}
 
-        {/* New Raw Materials Used Section */}
         {batch.raw_materials_used && batch.raw_materials_used.length > 0 && (
-          <div className="bg-white p-6 rounded-lg border shadow-sm print:shadow-none print:border-0 print:p-0 mt-6">
+          <div className="bg-white p-6 rounded-lg border shadow-sm mt-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">
               Raw Materials Used
             </h3>
@@ -719,7 +859,7 @@ const SingleManufacturingBatchPage = ({
               {batch.raw_materials_used.map((material, index) => (
                 <div
                   key={index}
-                  className="p-4 bg-gray-50 rounded-lg border print:bg-white print:border print:p-3"
+                  className="p-4 bg-gray-50 rounded-lg border"
                 >
                   <p className="text-gray-800 font-medium">
                     Material: {material.material_id.material_name}
@@ -738,9 +878,8 @@ const SingleManufacturingBatchPage = ({
           </div>
         )}
 
-        {/* Conditional Sections */}
         {pendingReworkItems.length > 0 && (
-          <div className="bg-orange-50 p-6 rounded-lg border border-orange-200 mt-6 print:hidden">
+          <div className="bg-orange-50 p-6 rounded-lg border border-orange-200 mt-6">
             <div className="flex items-center mb-4">
               <AlertTriangle className="h-6 w-6 text-orange-600 mr-3" />
               <h3 className="text-lg font-semibold text-orange-900">
@@ -775,7 +914,7 @@ const SingleManufacturingBatchPage = ({
         )}
 
         {batch.status === "In Progress" && batch.current_stage && (
-          <div className="bg-white p-6 rounded-lg border shadow-sm mt-6 print:hidden">
+          <div className="bg-white p-6 rounded-lg border shadow-sm mt-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               <ChevronsRight className="inline-block h-5 w-5 text-blue-600 mr-2" />
               Current Stage: {batch.current_stage.stage_name}
@@ -800,7 +939,7 @@ const SingleManufacturingBatchPage = ({
         )}
 
         {batch.status === "On Hold" && (
-          <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200 mt-6 print:hidden">
+          <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200 mt-6">
             <h3 className="text-lg font-semibold text-yellow-900">
               Batch On Hold
             </h3>
@@ -810,7 +949,7 @@ const SingleManufacturingBatchPage = ({
           </div>
         )}
         {batch.status === "Completed" && (
-          <div className="bg-green-50 p-6 rounded-lg border border-green-200 mt-6 print:hidden">
+          <div className="bg-green-50 p-6 rounded-lg border border-green-200 mt-6">
             <h3 className="text-lg font-semibold text-green-900">
               Batch Completed
             </h3>
@@ -820,8 +959,7 @@ const SingleManufacturingBatchPage = ({
           </div>
         )}
 
-        {/* Stage History */}
-        <div className="bg-white p-6 rounded-lg border shadow-sm mt-6 print:shadow-none print:border-0 print:p-0">
+        <div className="bg-white p-6 rounded-lg border shadow-sm mt-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
             Stage History & Quality Checks
           </h3>
@@ -839,31 +977,60 @@ const SingleManufacturingBatchPage = ({
                     {history.quality_checks.map((qc) => (
                       <div
                         key={qc._id}
-                        className="p-3 bg-gray-50 rounded-md border print:bg-white print:border print:p-2"
+                        className="p-3 bg-gray-50 rounded-md border"
                       >
                         <p className="text-sm font-medium">
                           QC on {formatDate(qc.check_date)}
                         </p>
                         <div className="grid grid-cols-3 gap-2 mt-2 text-center">
-                          <div className="bg-green-100 p-1 rounded print:bg-gray-100">
+                          <div className="bg-green-100 p-1 rounded">
                             <p className="text-xs text-green-700">Passed</p>
                             <p className="font-bold text-green-800">
                               {qc.disposition.quantity_passed}
                             </p>
                           </div>
-                          <div className="bg-orange-100 p-1 rounded print:bg-gray-100">
+                          <div className="bg-orange-100 p-1 rounded">
                             <p className="text-xs text-orange-700">Rework</p>
                             <p className="font-bold text-orange-800">
                               {qc.disposition.quantity_for_rework}
                             </p>
                           </div>
-                          <div className="bg-red-100 p-1 rounded print:bg-gray-100">
+                          <div className="bg-red-100 p-1 rounded">
                             <p className="text-xs text-red-700">Rejected</p>
                             <p className="font-bold text-red-800">
                               {qc.disposition.quantity_rejected}
                             </p>
                           </div>
                         </div>
+
+                        {qc.samples_data && qc.samples_data.length > 0 && (
+                          <div className="mt-4 overflow-x-auto">
+                            <p className="text-sm font-semibold mb-2">Sample Test Results</p>
+                            <table className="min-w-full text-sm text-left border border-gray-200">
+                              <thead>
+                                <tr className="bg-gray-100">
+                                  <th className="p-2 border-b border-r">Parameter</th>
+                                  <th className="p-2 border-b border-r">Specified Value</th>
+                                  <th className="p-2 border-b border-r">Observed Value</th>
+                                  <th className="p-2 border-b">Result</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {qc.samples_data.map((sample, sampleIndex) => (
+                                  <tr key={sampleIndex} className="odd:bg-white even:bg-gray-50">
+                                    <td className="p-2 border-r">{sample.parameter}</td>
+                                    <td className="p-2 border-r">{sample.specification}</td>
+                                    <td className="p-2 border-r">{sample.observed_value}</td>
+                                    <td className={`p-2 font-medium ${sample.passed ? 'text-green-600' : 'text-red-600'}`}>
+                                      {sample.passed ? 'Pass' : 'Fail'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
                         {qc.notes && (
                           <p className="text-xs text-gray-600 mt-2">
                             <b>Notes:</b> {qc.notes}
@@ -885,28 +1052,25 @@ const SingleManufacturingBatchPage = ({
         </div>
       </div>
 
-      {/* Modals - hidden during print */}
-      <div className="print:hidden">
-        {batch.current_stage && (
-          <QualityCheckModal
-            isOpen={showQualityCheckModal}
-            onClose={() => setShowQualityCheckModal(false)}
-            onSubmit={handleDispositionSubmit}
-            batch={batch}
-            submitting={submitting}
-          />
-        )}
-        <ResolveReworkModal
-          isOpen={showResolveReworkModal}
-          onClose={() => {
-            setShowResolveReworkModal(false);
-            setSelectedReworkItem(null);
-          }}
-          onSubmit={handleResolveReworkSubmit}
-          reworkItem={selectedReworkItem}
+      {batch.current_stage && (
+        <QualityCheckModal
+          isOpen={showQualityCheckModal}
+          onClose={() => setShowQualityCheckModal(false)}
+          onSubmit={handleDispositionSubmit}
+          batch={batch}
           submitting={submitting}
         />
-      </div>
+      )}
+      <ResolveReworkModal
+        isOpen={showResolveReworkModal}
+        onClose={() => {
+          setShowResolveReworkModal(false);
+          setSelectedReworkItem(null);
+        }}
+        onSubmit={handleResolveReworkSubmit}
+        reworkItem={selectedReworkItem}
+        submitting={submitting}
+      />
     </div>
   );
 };

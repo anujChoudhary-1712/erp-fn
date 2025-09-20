@@ -5,14 +5,95 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import PurchaseReqApis from '@/actions/Apis/PurchaseReqApis';
 import VendorApis from '@/actions/Apis/VendorApis';
+import MachineryApis from '@/actions/Apis/MachineryApis';
 import InputField from '@/components/ReusableComponents/InputField';
 import Button from '@/components/ReusableComponents/Button';
 import { formatDate } from '@/utils/date';
 import { getCookie } from '@/actions/CookieUtils';
-import { Upload, X, FileText, Trash2, CheckCircle } from 'lucide-react';
+import { Upload, X, FileText, Trash2, CheckCircle, Calendar, User } from 'lucide-react';
+
+// --- Enhanced TypeScript Interfaces ---
+interface MaterialReceivedPayload {
+  materialId: string;
+  receivedQuantity: number;
+}
+
+interface PurchaseReceivedPayload {
+  model?: string;
+  make?: string;
+  serialNo?: string;
+  deviceId?: string;
+  documents?: {
+    documentId: string;
+    name: string;
+    purchaseRecdDate: string;
+  }[];
+  materialsReceived?: MaterialReceivedPayload[];
+  notes?: string;
+}
+
+interface MachineryUpdatePayload {
+  // Date & Documentation fields
+  date_of_purchase?: string;
+  name_of_vendor?: string;
+  date_of_installation?: string;
+  warranty_period?: string;
+  date_of_operation?: string;
+  has_user_manual?: boolean;
+  
+  // General fields that might be updated
+  model?: string;
+  make?: string;
+  serial_number?: string;
+  machine_equipment_name?: string;
+  location?: string;
+  status?: string;
+}
+
+interface DocumentItem {
+  documentId: string;
+  name: string;
+  purchaseRecdDate: string;
+}
+
+interface VendorRatingData {
+  quality: number;
+  delivery: number;
+  price: number;
+  communication: number;
+  overall: number;
+  comments: string;
+}
+
+interface Vendor {
+  _id: string;
+  company_name: string;
+  contact_person: string;
+  mobile_no: string;
+}
+
+interface Purchase {
+  _id: string;
+  purchaseRequestType: 'Material' | 'Machinery' | 'Misc';
+  materials?: any[];
+  machineryId?: {
+    _id: string;
+    name: string;
+    model: string;
+    make: string;
+    sr_no: string;
+    machine_equipment_name?: string;
+  };
+  misc_id?: {
+    itemName: string;
+  };
+  vendorsEvaluated?: Array<{
+    vendorId: Vendor;
+    isSelected?: boolean;
+  }>;
+}
 
 // --- Reusable RatingStars Component ---
-// This component provides a visual star rating interface.
 interface RatingStarsProps {
   rating: number;
   onRatingChange?: (value: number) => void;
@@ -60,72 +141,8 @@ const RatingStars: React.FC<RatingStarsProps> = ({ rating, onRatingChange, readO
     </div>
   );
 };
-// --- End of RatingStars Component ---
 
-// --- TypeScript Interfaces ---
-interface MaterialReceivedPayload {
-  materialId: string;
-  receivedQuantity: number;
-}
-
-interface PurchaseReceivedPayload {
-  model?: string;
-  make?: string;
-  serialNo?: string;
-  deviceId?: string;
-  documents?: {
-    documentId: string;
-    name: string;
-    purchaseRecdDate: string;
-  }[];
-  materialsReceived?: MaterialReceivedPayload[];
-  notes?: string;
-}
-
-interface DocumentItem {
-  documentId: string;
-  name: string;
-  purchaseRecdDate: string;
-}
-
-interface VendorRatingData {
-  quality: number;
-  delivery: number;
-  price: number;
-  communication: number;
-  overall: number;
-  comments: string;
-}
-
-interface Vendor {
-  _id: string;
-  company_name: string;
-  contact_person: string;
-  mobile_no: string;
-}
-
-interface Purchase {
-  _id: string;
-  purchaseRequestType: 'Material' | 'Machinery' | 'Misc';
-  materials?: any[];
-  machineryId?: {
-    _id: string;
-    name: string;
-    model: string;
-    make: string;
-    sr_no: string;
-  };
-  misc_id?: {
-    itemName: string;
-  };
-  vendorsEvaluated?: Array<{
-    vendorId: Vendor;
-    isSelected?: boolean;
-  }>;
-}
-
-// --- Simplified Document Upload Modal Component ---
-// This is a minimal modal to handle the document upload flow.
+// --- Document Upload Modal Component ---
 interface DocumentUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -168,7 +185,6 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
 
       const data = await response.json();
       onUploadSuccess(data.document._id, docName);
-      // Reset state and close modal
       setDocName('');
       setFile(null);
       onClose();
@@ -198,7 +214,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
             type="text"
             value={docName}
             onChange={(e) => setDocName(e.target.value)}
-            placeholder="e.g., Invoice, Warranty Card"
+            placeholder="e.g., Invoice, User Manual, Warranty Card"
           />
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Select File</label>
@@ -224,10 +240,9 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ isOpen, onClo
     </div>
   );
 };
-// --- End of Document Upload Modal Component ---
 
 const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
-  // --- State Management ---
+  // --- Enhanced State Management ---
   const [purchase, setPurchase] = useState<Purchase | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -239,6 +254,15 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
   });
   const [vendorRatings, setVendorRatings] = useState<{ [key: string]: VendorRatingData }>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // New state for machinery-specific fields
+  const [machineryFormData, setMachineryFormData] = useState<MachineryUpdatePayload>({
+    date_of_purchase: new Date().toISOString().split('T')[0],
+    date_of_installation: '',
+    date_of_operation: '',
+    warranty_period: '',
+    has_user_manual: false,
+  });
 
   const router = useRouter();
 
@@ -260,14 +284,27 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
             }));
             setFormData(prev => ({ ...prev, materialsReceived }));
           }
-          // Initialize form data for Machinery/Misc
+          // Initialize form data for Machinery
           else if (purchaseData?.purchaseRequestType === 'Machinery') {
             setFormData(prev => ({
               ...prev,
               model: purchaseData.machineryId?.model || '',
               make: purchaseData.machineryId?.make || '',
-              serialNo: purchaseData.machineryId?.sr_no || '',
+              serialNo: purchaseData.machineryId?.serial_number || '',
             }));
+
+            // Auto-fill machinery data from selected vendor
+            const selectedVendor = purchaseData.vendorsEvaluated?.find((v: any) => v.isSelected);
+            if (selectedVendor) {
+              setMachineryFormData(prev => ({
+                ...prev,
+                name_of_vendor: selectedVendor.vendorId.company_name || '',
+                model: purchaseData.machineryId?.model || '',
+                make: purchaseData.machineryId?.make || '',
+                serial_number: purchaseData.machineryId?.sr_no || '',
+                machine_equipment_name: purchaseData.machineryId?.machine_equipment_name || purchaseData.machineryId?.name || '',
+              }));
+            }
           }
 
           // Initialize vendor ratings if a vendor is selected
@@ -303,6 +340,16 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleMachineryInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const finalValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    
+    setMachineryFormData((prev) => ({ 
+      ...prev, 
+      [name]: finalValue 
+    }));
   };
 
   const handleMaterialQuantityChange = (materialId: string, quantity: string) => {
@@ -355,7 +402,7 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
     }));
   };
 
-  // --- Form Submission ---
+  // --- Enhanced Form Submission ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -376,7 +423,6 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
       };
 
       if (purchase?.purchaseRequestType === 'Material') {
-        // For Material, prepare the specific payload
         if (!formData.materialsReceived || formData.materialsReceived.some(item => !item.materialId || !item.receivedQuantity || item.receivedQuantity <= 0)) {
           setError("Please enter a positive quantity received for all materials.");
           setSubmitting(false);
@@ -384,16 +430,43 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
         }
         payload.materialsReceived = formData.materialsReceived;
       } else {
-        // For Machinery/Misc, prepare the generic payload
         payload.model = formData.model;
         payload.make = formData.make;
         payload.serialNo = formData.serialNo;
         payload.deviceId = formData.deviceId;
       }
 
+      // Mark purchase as received
       const res = await PurchaseReqApis.purchaseReceived(params.id, payload);
       if (res.status !== 200) {
         throw new Error(res.data?.message || "Failed to mark purchase as received");
+      }
+
+      // Update machinery details if it's a machinery purchase
+      if (purchase?.purchaseRequestType === 'Machinery' && purchase.machineryId?._id) {
+        try {
+          const machineryUpdatePayload: MachineryUpdatePayload = {
+            ...machineryFormData,
+            // Set dates for documentation
+            date_of_purchase: machineryFormData.date_of_purchase,
+            date_of_installation: machineryFormData.date_of_installation || undefined,
+            date_of_operation: machineryFormData.date_of_operation || undefined,
+            status: 'Active', // Set status to active when received
+          };
+
+          // Remove empty/undefined fields
+          Object.keys(machineryUpdatePayload).forEach(key => {
+            if (machineryUpdatePayload[key as keyof MachineryUpdatePayload] === '' || 
+                machineryUpdatePayload[key as keyof MachineryUpdatePayload] === undefined) {
+              delete machineryUpdatePayload[key as keyof MachineryUpdatePayload];
+            }
+          });
+
+          await MachineryApis.updateMachinery(purchase.machineryId._id, machineryUpdatePayload);
+        } catch (machineryError) {
+          console.warn("Failed to update machinery details:", machineryError);
+          // Don't fail the entire process if machinery update fails
+        }
       }
 
       // Submit vendor ratings if available and non-empty
@@ -403,7 +476,7 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
           const payload = {
             purchase_id: params.id,
             material_id: material?.materialId._id || '',
-            material_name: material?.materialId.material_name || '',
+            material_name: material?.materialId.material_name || purchase?.machineryId?.name || '',
             criticality: material?.criticality || 'Regular',
             quality_score: ratingData.quality,
             delivery_score: ratingData.delivery,
@@ -419,7 +492,7 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
 
       await Promise.all(ratingPromises);
       
-      setSuccess("Purchase has been marked as received and vendor(s) have been rated successfully!");
+      setSuccess("Purchase has been marked as received successfully! Machinery details have been updated and vendor(s) have been rated.");
       setTimeout(() => {
         router.push(`/dashboard/purchases/${params.id}`);
       }, 2000);
@@ -460,7 +533,7 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
   const selectedVendor = purchase.vendorsEvaluated?.find((v: any) => v.isSelected);
   const vendorObj = selectedVendor?.vendorId;
   const itemDisplayName = purchase.purchaseRequestType === 'Machinery'
-    ? purchase.machineryId?.name
+    ? purchase.machineryId?.machine_equipment_name
     : purchase.purchaseRequestType === 'Material'
       ? purchase.materials?.[0]?.materialId.material_name
       : purchase.misc_id?.itemName;
@@ -495,7 +568,7 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
                 Purchase Received - {purchase.purchaseRequestType}
               </h1>
               <p className="text-gray-600 mt-1">
-                Record details of the received item and rate the vendor&apos;s performance.
+                Record details of the received item and update documentation.
               </p>
             </div>
           </div>
@@ -505,9 +578,7 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
         {success && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+              <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
               <p className="text-green-800 font-medium">{success}</p>
             </div>
           </div>
@@ -525,8 +596,130 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Item Details (for Machinery and Misc) */}
-          {(purchase.purchaseRequestType === 'Machinery' || purchase.purchaseRequestType === 'Misc') && (
+          {/* Enhanced Machinery Details */}
+          {purchase.purchaseRequestType === 'Machinery' && (
+            <>
+              {/* Basic Item Details */}
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Item Details</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                    <p className="font-medium text-gray-900">{itemDisplayName}</p>
+                  </div>
+                  
+                  <InputField
+                    label="Model"
+                    name="model"
+                    value={formData.model}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Model-XYZ-2025"
+                    required
+                  />
+                  <InputField
+                    label="Make"
+                    name="make"
+                    value={formData.make}
+                    onChange={handleInputChange}
+                    placeholder="e.g., ABC Manufacturing"
+                    required
+                  />
+                  <InputField
+                    label="Serial Number"
+                    name="serialNo"
+                    value={formData.serialNo}
+                    onChange={handleInputChange}
+                    placeholder="e.g., SN123456789"
+                    required
+                  />
+                  <InputField
+                    label="Device ID"
+                    name="deviceId"
+                    value={formData.deviceId}
+                    onChange={handleInputChange}
+                    placeholder="e.g., DEV-001-2025"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Enhanced Date & Documentation Section for Machinery */}
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">Date & Documentation</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputField
+                    label="Date of Purchase"
+                    name="date_of_purchase"
+                    type="date"
+                    value={machineryFormData.date_of_purchase}
+                    onChange={handleMachineryInputChange}
+                    required
+                  />
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <User className="w-4 h-4 inline mr-1" />
+                      Name of Vendor
+                    </label>
+                    <input
+                      type="text"
+                      name="name_of_vendor"
+                      value={machineryFormData.name_of_vendor}
+                      onChange={handleMachineryInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                      placeholder="Vendor company name"
+                      readOnly
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Auto-filled from selected vendor</p>
+                  </div>
+
+                  <InputField
+                    label="Date of Installation"
+                    name="date_of_installation"
+                    type="date"
+                    value={machineryFormData.date_of_installation}
+                    onChange={handleMachineryInputChange}
+                  />
+
+                  <InputField
+                    label="Warranty Period"
+                    name="warranty_period"
+                    value={machineryFormData.warranty_period}
+                    onChange={handleMachineryInputChange}
+                    placeholder="e.g., 2 years, 24 months"
+                  />
+
+                  <InputField
+                    label="Date of Operation"
+                    name="date_of_operation"
+                    type="date"
+                    value={machineryFormData.date_of_operation}
+                    onChange={handleMachineryInputChange}
+                  />
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="has_user_manual"
+                      name="has_user_manual"
+                      checked={machineryFormData.has_user_manual}
+                      onChange={handleMachineryInputChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="has_user_manual" className="text-sm font-medium text-gray-700">
+                      User Manual Received
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Enhanced Item Details for Misc */}
+          {purchase.purchaseRequestType === 'Misc' && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Item Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -617,6 +810,26 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
               </Button>
             </div>
             
+            {/* Document Type Suggestions */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 font-medium mb-2">Recommended documents to upload:</p>
+              <div className="flex flex-wrap gap-2">
+                {purchase.purchaseRequestType === 'Machinery' ? (
+                  <>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Invoice*</span>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">User Manual</span>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Warranty Card</span>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Installation Guide</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Invoice*</span>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-blue-600 mt-2">* Required document</p>
+            </div>
+            
             {/* List of Uploaded Documents */}
             <div className="space-y-3">
               {formData.documents && formData.documents.length > 0 ? (
@@ -626,6 +839,7 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
                       <FileText className="h-5 w-5 text-blue-500" />
                       <div>
                         <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                        <p className="text-xs text-gray-500">Uploaded on {formatDate(doc.purchaseRecdDate)}</p>
                       </div>
                     </div>
                     <Button
@@ -642,7 +856,7 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
               )}
             </div>
             
-            {/* Invoice validation message for all types */}
+            {/* Invoice validation message */}
             {!formData.documents?.some(d => d.name.toLowerCase().includes('invoice')) && (
               <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-800">
@@ -650,6 +864,24 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Additional Notes */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Additional Notes</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Notes (Optional)
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes || ''}
+                onChange={handleInputChange}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter any additional notes about the received items, condition, installation, etc."
+              />
+            </div>
           </div>
 
           {/* Vendor Rating */}
@@ -715,8 +947,8 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
                     onChange={(e) => handleRatingCommentsChange(vendorObj._id, e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter additional comments here..."
-                  ></textarea>
+                    placeholder="Share your experience with this vendor..."
+                  />
                 </div>
 
                 <div className="mt-4 p-3 bg-white rounded-md border">
@@ -751,7 +983,7 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
               disabled={submitting}
               className="min-w-40"
             >
-              {submitting ? 'Submitting...' : 'Mark as Received'}
+              {submitting ? 'Processing...' : 'Mark as Received & Update Records'}
             </Button>
           </div>
         </form>
@@ -762,12 +994,14 @@ const PurchaseReceivedPage = ({ params }: { params: { id: string } }) => {
             <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
               <span className="text-gray-700 font-medium">
-                Submitting purchase details...
+                Processing purchase and updating records...
               </span>
             </div>
           </div>
         )}
       </div>
+      
+      {/* Document Upload Modal */}
       <DocumentUploadModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
