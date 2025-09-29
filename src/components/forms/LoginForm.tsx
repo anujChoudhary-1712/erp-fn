@@ -45,7 +45,13 @@ const allNavigationItems = [
     label: "Inventory",
     icon: <Package size={20} />,
     href: "/dashboard/inventory",
-    requiredRoles: ["store_finished_goods", "store_raw_materials", "store_general", "machinery", "admin"],
+    requiredRoles: [
+      "store_finished_goods",
+      "store_raw_materials",
+      "store_general",
+      "machinery",
+      "admin",
+    ],
     children: [
       {
         id: "finished-goods",
@@ -354,8 +360,9 @@ const LoginForm = ({ userType }: { userType: "internal" | "organization" }) => {
         try {
           setCookie("token", res.data.token, {
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-            sameSite: "strict",
-            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax", // Changed from "strict" to "lax"
+            secure: false, // Changed to false for HTTP (IP access)
+            path: "/", // Ensure path is set
           });
         } catch (cookieError) {
           console.error("Failed to set cookie:", cookieError);

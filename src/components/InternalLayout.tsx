@@ -97,6 +97,7 @@ const InternalLayout: React.FC<InternalLayoutProps> = ({
           mainTabItems={mainTabItems}
           moreMenuItems={[]}
           currentPath={currentPath}
+          onLogout={() => {}}
         />
       </div>
     </div>

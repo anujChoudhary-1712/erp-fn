@@ -1,46 +1,49 @@
 #!/bin/bash
 
-# ERP Frontend - Next.js Build Script
-# Creates production build without exposing source code
+# Windows Deployment Build Script for ERP Frontend
+# Creates production folder structure for C:/ERP/frontend deployment
 
-echo "🚀 Building ERP Frontend (Next.js)"
-echo "=================================="
+echo "🏢 Building ERP Frontend for Windows Deployment"
+echo "==============================================="
 
-# Create build directory
-BUILD_DIR="erp-frontend-production"
+DEPLOY_FOLDER="frontend"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-echo "📁 Creating build structure..."
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"
+# 1. Clean previous build
+echo "📁 Cleaning previous build..."
+rm -rf "$DEPLOY_FOLDER"
+rm -rf .next
 
-# Build Next.js for production
-echo "⚡ Building Next.js production build..."
+# 2. Install dependencies and build
+echo "📦 Installing dependencies..."
+npm install
+
+echo "⚡ Building Next.js production..."
 npm run build
 
-# Check if build was successful
+# 3. Check if build succeeded
 if [ ! -d ".next" ]; then
-    echo "❌ Build failed! Make sure 'npm run build' works in your project."
+    echo "❌ Build failed! No .next folder found."
     exit 1
 fi
 
-# Copy production files (NO source code)
+# 4. Create deployment folder structure
+echo "📁 Creating deployment folder structure..."
+mkdir -p "$DEPLOY_FOLDER"
+mkdir -p "$DEPLOY_FOLDER/logs"
+
+# 5. Copy essential files
 echo "📋 Copying production files..."
-cp -r .next "$BUILD_DIR/"
-cp -r public "$BUILD_DIR/" 2>/dev/null || echo "No public directory found"
-cp package.json "$BUILD_DIR/"
-cp package-lock.json "$BUILD_DIR/" 2>/dev/null || echo "No package-lock.json found"
-cp next.config.js "$BUILD_DIR/" 2>/dev/null || echo "No next.config.js found"
+cp -r .next "$DEPLOY_FOLDER/"
+cp -r public "$DEPLOY_FOLDER/" 2>/dev/null || echo "ℹ️ No public directory"
+cp next.config.js "$DEPLOY_FOLDER/" 2>/dev/null || echo "ℹ️ No next.config.js"
 
-# Copy only production dependencies
-cd "$BUILD_DIR"
-
-# Create production package.json (only runtime dependencies)
-echo "📋 Creating production package.json..."
-cat > package.json << 'EOF'
+# 6. Create production package.json (minimal dependencies)
+echo "📦 Creating production package.json..."
+cat > "$DEPLOY_FOLDER/package.json" << 'EOF'
 {
-  "name": "erp-frontend-production",
+  "name": "erp-frontend",
   "version": "1.0.0",
-  "description": "ERP Frontend - Production Build",
   "private": true,
   "scripts": {
     "start": "next start -p 3000",
@@ -54,186 +57,167 @@ cat > package.json << 'EOF'
 }
 EOF
 
-# Create required runtime directories
-mkdir -p logs
-
-# Install only production dependencies
-echo "📦 Installing production dependencies..."
-npm install --production
-
-# Create environment configuration
-echo "⚙️ Creating environment configuration..."
-cat > .env.production << 'EOF'
+# 7. Create .env.production file
+echo "🔧 Creating .env.production..."
+cat > "$DEPLOY_FOLDER/.env.production" << 'EOF'
 # Frontend Production Configuration
 NODE_ENV=production
 NEXT_TELEMETRY_DISABLED=1
 
 # API Configuration (Update these)
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://localhost:8001/api
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Backend Configuration (must match backend CORS settings)
+# Make sure backend CORS_ALLOWED_ORIGINS includes: http://localhost:3000
 
 # Optional: Analytics, etc.
 # NEXT_PUBLIC_ANALYTICS_ID=your-analytics-id
 EOF
 
-# Create installation scripts
-echo "⚙️ Creating installation scripts..."
+# 8. Create Windows batch files
+echo "🔧 Creating Windows batch files..."
 
-# Windows batch file
-cat > install.bat << 'EOF'
+# install.bat
+cat > "$DEPLOY_FOLDER/install.bat" << 'EOF'
 @echo off
-echo ERP Frontend Installation
-echo =========================
+echo Installing ERP Frontend Dependencies...
+echo =====================================
+
+npm install --production --legacy-peer-deps
+
+if %errorlevel% neq 0 (
+    echo ERROR: Installation failed!
+    pause
+    exit /b 1
+)
+
 echo.
-echo Installing production dependencies...
-npm install --production
+echo ✅ Frontend installation complete!
 echo.
-echo ================================
-echo Installation Complete!
-echo ================================
-echo.
-echo Configuration:
-echo 1. Edit .env.production file to update API URLs
-echo 2. Update NEXT_PUBLIC_API_URL to your backend URL
-echo.
-echo Start Options:
-echo . For Development/Testing: start-frontend.bat
-echo . For Production 24/7: start-frontend-24x7.bat
-echo.
-echo Default URLs:
-echo . Frontend: http://localhost:3000
-echo . Ensure backend is running on: http://localhost:5000
+echo Next steps:
+echo 1. Configure .env.production if needed
+echo 2. Run start.bat to test
+echo 3. Use PM2 with ecosystem.config.js for production
 echo.
 pause
 EOF
 
-# Linux/Mac installation script
-cat > install.sh << 'EOF'
-#!/bin/bash
-echo "ERP Frontend Installation"
-echo "========================"
-echo ""
-echo "Installing production dependencies..."
-npm install --production
-echo ""
-echo "Setting permissions..."
-chmod +x start-frontend.sh
-chmod +x start-frontend-24x7.sh
-echo ""
-echo "================================"
-echo "Installation Complete!"
-echo "================================"
-echo ""
-echo "Configuration:"
-echo "1. Edit .env.production file to update API URLs"
-echo "2. Update NEXT_PUBLIC_API_URL to your backend URL"
-echo ""
-echo "Start Options:"
-echo "• Development/Testing: ./start-frontend.sh"
-echo "• Production 24/7: ./start-frontend-24x7.sh"
-echo ""
-echo "Default URLs:"
-echo "• Frontend: http://localhost:3000"
-echo "• Ensure backend is running on: http://localhost:5000"
-echo ""
-EOF
-
-chmod +x install.sh
-
-# Create startup scripts
-echo "⚙️ Creating startup scripts..."
-
-# Linux/Mac startup script
-cat > start-frontend.sh << 'EOF'
-#!/bin/bash
-echo "🚀 Starting ERP Frontend..."
-echo "=========================="
-echo ""
-echo "Frontend will be available at:"
-echo "- Local: http://localhost:3000"
-echo "- Network: http://$(ipconfig getifaddr en0 2>/dev/null || hostname -I | awk '{print $1}'):3000"
-echo ""
-echo "Press Ctrl+C to stop the server"
-echo ""
-
-# Start Next.js in production mode
-NODE_ENV=production npm start
-EOF
-
-chmod +x start-frontend.sh
-
-# Windows startup script
-cat > start-frontend.bat << 'EOF'
+# start.bat
+cat > "$DEPLOY_FOLDER/start.bat" << 'EOF'
 @echo off
-echo 🚀 Starting ERP Frontend...
-echo ==========================
+echo Starting ERP Frontend...
+echo =======================
+
+if not exist ".next" (
+    echo ERROR: No .next build found!
+    echo Please ensure the build was successful.
+    pause
+    exit /b 1
+)
+
 echo.
 echo Frontend will be available at:
 echo - Local: http://localhost:3000
-echo - Network: Check your local IP
+echo - Network: http://%COMPUTERNAME%:3000
 echo.
 echo Press Ctrl+C to stop the server
 echo.
 
 set NODE_ENV=production
 npm start
-pause
 EOF
 
-# PM2 startup script for 24/7 operation
-cat > start-frontend-24x7.sh << 'EOF'
-#!/bin/bash
-echo "🚀 Starting ERP Frontend 24/7 with PM2..."
-echo "========================================"
-
-# Check if PM2 is installed
-if ! command -v pm2 &> /dev/null; then
-    echo "📦 Installing PM2 globally..."
-    npm install -g pm2
-fi
-
-# Stop existing frontend process if running
-pm2 delete erp-frontend 2>/dev/null || echo "No existing frontend process found"
-
-# Start with PM2
-echo "🔄 Starting frontend with PM2..."
-NODE_ENV=production pm2 start npm --name "erp-frontend" -- start
-
-# Enable auto-restart on system reboot
-echo "⚙️ Configuring auto-restart on system boot..."
-pm2 startup
-
-# Save current PM2 configuration
-pm2 save
-
-echo ""
-echo "✅ Frontend started successfully!"
-echo "================================"
-echo ""
-echo "🌐 Access URLs:"
-echo "- Local: http://localhost:3000"
-echo "- Network: http://$(ipconfig getifaddr en0 2>/dev/null || hostname -I | awk '{print $1}'):3000"
-echo ""
-echo "📊 PM2 Management Commands:"
-echo "- Check status: pm2 status"
-echo "- View logs: pm2 logs erp-frontend"
-echo "- Restart: pm2 restart erp-frontend"
-echo "- Stop: pm2 stop erp-frontend"
-echo "- Monitor: pm2 monit"
-echo ""
+# 9. Create PM2 ecosystem config
+echo "🔧 Creating PM2 ecosystem config..."
+cat > "$DEPLOY_FOLDER/ecosystem.frontend.config.js" << 'EOF'
+module.exports = {
+  apps: [
+    {
+      name: "erp-frontend",
+      cwd: "C:/ERP/frontend",
+      script: "node",
+      args: "./node_modules/next/dist/bin/next start -p 3000",
+      autorestart: true,
+      watch: false,
+      out_file: "C:/ERP/frontend/logs/frontend-out.log",
+      error_file: "C:/ERP/frontend/logs/frontend-error.log",
+      env: {
+        NODE_ENV: "production"
+      }
+    }
+  ]
+};
 EOF
 
-chmod +x start-frontend-24x7.sh
+# 10. Create README for deployment
+echo "📖 Creating deployment README..."
+cat > "$DEPLOY_FOLDER/README-DEPLOYMENT.md" << 'EOF'
+# ERP Frontend - Windows Deployment
 
-# Create comprehensive README
-cat > README.md << 'EOF'
-# ERP Frontend - Production Distribution
+## Quick Setup
 
-This package contains the production build of the ERP Frontend (Next.js).
-**Source code is compiled and protected** - only production build is distributed.
+1. **Extract to Windows:**
+   ```
+   Copy this folder to: C:/ERP/frontend
+   ```
 
-## Quick Start
+2. **Install Dependencies:**
+   ```
+   Double-click: install.bat
+   ```
 
-### 1. Installation
-```bash
-./install.sh
+3. **Test Run:**
+   ```
+   Double-click: start.bat
+   ```
+
+4. **Production with PM2:**
+   ```
+   cd C:/ERP
+   pm2 start frontend/ecosystem.frontend.config.js
+   ```
+
+## File Structure
+```
+C:/ERP/frontend/
+├── .next/                 # Built application
+├── logs/                  # Log files
+├── .env.production        # Environment config
+├── package.json           # Dependencies
+├── install.bat           # Installation script
+├── start.bat             # Start script
+└── ecosystem.frontend.config.js  # PM2 config
+```
+
+## Troubleshooting
+
+- **Port 3000 in use:** Change port in ecosystem config
+- **Build errors:** Check logs/ folder
+- **API connection:** Verify backend is running on port 8001
+
+## URLs
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8001/api
+EOF
+
+# 11. Make batch files executable (if on Unix-like system)
+chmod +x "$DEPLOY_FOLDER"/*.bat 2>/dev/null || true
+
+# 12. Show deployment summary
+echo ""
+echo "✅ Windows deployment package created!"
+echo "======================================"
+echo ""
+echo "📁 Folder: $DEPLOY_FOLDER"
+echo "📊 Size: $(du -sh $DEPLOY_FOLDER | cut -f1)"
+echo ""
+echo "📋 Contents:"
+ls -la "$DEPLOY_FOLDER"
+echo ""
+echo "🚀 Ready for Windows deployment:"
+echo "   1. Copy '$DEPLOY_FOLDER' folder to C:/ERP/ on Windows"
+echo "   2. Run install.bat to install dependencies"
+echo "   3. Use PM2 ecosystem config for production"
+echo ""
+echo "📁 Expected Windows path: C:/ERP/frontend/"

@@ -367,6 +367,7 @@ const CustomersLayout: React.FC<CustomersLayoutProps> = ({
       icon: <LogOut size={20} />,
       href: "#",
       requiredRoles: [],
+       children: undefined, 
     });
 
     const mainTabItems = [
