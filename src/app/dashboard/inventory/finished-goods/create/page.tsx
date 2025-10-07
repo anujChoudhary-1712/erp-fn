@@ -79,7 +79,7 @@ const CreateProductPage: React.FC = () => {
   const productId = searchParams.get("pId") || "";
 
   // State for the overall multi-step process
-  const [currentStep, setCurrentStep] = useState<number>(2);
+  const [currentStep, setCurrentStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
